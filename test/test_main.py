@@ -7,7 +7,3 @@ def test_answer():
 
 def test_answer2():
     assert main_algo(2, 3) == 5
-
-
-def test_answer3():
-    assert main_algo(2, 3) == 5
