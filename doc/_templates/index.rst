@@ -11,6 +11,7 @@ Welcome to algo1's documentation!
    :caption: Contents:
 
    main
+   q_functions
 
 Indices and tables
 ==================

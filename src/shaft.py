@@ -1,6 +1,7 @@
 import json
 
 import cmath
+import math
 import numpy as np
 
 nodes_dictionary = json.loads('''{
@@ -50,6 +51,28 @@ end_dictionary = json.loads('''{
 "b2":{"annotation":{"boundary":true,"coord":[-1.0,-2.75]}},
 "b3":{"annotation":{"boundary":true,"coord":[2.0,-2.75]}}
 }''')
+
+c = [
+    {'v0': {
+        'annotation': {'coord': [0.5, 1.5]},
+        'edge_in': [['v0', 'v2']],
+        'data': {'value': '3/4', 'type': 'X'},
+        'edge_out': [['v3', 'v0'], ['v6', 'v0']]}},
+    {'v6': {
+        'annotation': {'coord': [2.5, 3.5]},
+        'edge_in': [['b1', 'v6'], ['v6', 'v2']],
+        'data': {'value': '1', 'type': 'Z'},
+        'edge_out': [['v6', 'v0']]}},
+    {'v9': {'annotation': {'coord': [1.5, 1.25]},
+            'edge_in': [['v9', 'v2']],
+            'data': {'value': '1/2', 'type': 'Z'},
+            'edge_out': [['v1', 'v9']]}
+     }]
+
+m = [[0.70710678 + 0.j, 0. + 0.j],
+     [0.70710678 + 0.j, 0. + 0.j],
+     [0. + 0.j,         -0.5 + 0.5j],
+     [0. + 0.j,         0.5 - 0.5j]]
 
 # print(nodes_dictionary)
 # print(edges_dictionary)
@@ -220,7 +243,7 @@ def tensor_product(a, b):
     matrix_b = np.array(b)
     ma, na = matrix_a.shape
     mb, nb = matrix_b.shape
-    mr, nr = ma*mb, na*nb
+    mr, nr = ma * mb, na * nb
     result = np.zeros((mr, nr))
     for i in np.arange(mr):
         for j in np.arange(nr):
@@ -251,18 +274,18 @@ def nodes_matrix(nodes):
                     # X node, angle 0
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1
-                    matrix_func = np.dot(tensor_power(h, m-1), np.dot(matrix_func, tensor_power(h, n-1)))
+                    matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
                 elif node_func[node_name_func]['data']['type'] == 'Z':
                     # Z node, angle node_func[node_name_func]['data']['value']
                     alpha = float(node_func[node_name_func]['data']['value'])
                     matrix_func[0][0] = 1
-                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(alpha*1j)
+                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(alpha * 1j)
                 else:
                     # X node, angle node_func[node_name_func]['data']['value']
                     alpha = float(node_func[node_name_func]['data']['value'])
-                    matrix_func[0][0], matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1, cmath.exp(alpha*1j)
+                    matrix_func[0][0], matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1, cmath.exp(alpha * 1j)
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
-                    matrix_func = np.dot(tensor_power(h, m-1), np.dot(matrix_func, tensor_power(h, n-1)))
+                    matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
             matrix_list.append(matrix_func)
     return matrix_list
 
@@ -290,3 +313,6 @@ for matrix in nodes_matrix(node_list):
 #         node_list[1]['v8']['edge_in'].append(edge)
 # print(node_list[1]['v8']['edge_in'])
 # print(len(node_list[1]['v8']['edge_in']))
+
+test = float(eval('math.pi/2'))
+print(test)

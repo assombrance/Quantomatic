@@ -1,4 +1,5 @@
 import cmath
+import math
 import numpy as np
 
 
@@ -21,57 +22,64 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     """
     matrix = None
     circuit = start_nodes
+    circuit_names = []
+    for node in start_nodes:
+        for node_name in node:
+            circuit_names.append(node_name)
     start_nodes_order = sort_nodes(circuit)
     start_edges_order = []
     for node in start_nodes_order:
-        for edge in edges:
-            if node in edge:
-                start_edges_order.append(edge)
-    while end_nodes not in circuit:
-        next_nodes_to_be_added = neighbours(circuit, inside_nodes + end_nodes, edges)
-        for edge in edges:
-            if edge[0] in next_nodes_to_be_added and edge[1] in next_nodes_to_be_added:
-                next_nodes_to_be_added.remove(edge[0])
-        end_nodes_order = sort_nodes(next_nodes_to_be_added)
-        end_edges_order = []
-        for node in end_nodes_order:
-            for edge in edges:  # TODO attention, probablement des bugs de format ici
-                if (edge[0] == node and edge[1] in circuit) or (edge[1] == node and edge[0] in circuit):
-                    end_edges_order.append(edge)
-                    node['edge_in'].append(edge)
-                if (edge[0] == node and edge[1] not in circuit) or (edge[1] == node and edge[0] not in circuit):
-                    node['edge_out'].append(edge)
+        for node_name in node:
             for edge in edges:
-                if ((edge[0] in circuit and edge[1] not in circuit + next_nodes_to_be_added)
-                        and (edge[1] in circuit and edge[0] not in circuit + next_nodes_to_be_added)):
-                    end_edges_order.append(edge)
+                if node_name in edge:
+                    start_edges_order.append(edge)
+    end_nodes_names = []
+    for node in end_nodes:
+        for node_name in node:
+            end_nodes_names.append(node_name)
+    while end_nodes not in circuit:
+        next_nodes_to_be_added, next_nodes_to_be_added_names = neighbours(circuit, inside_nodes + end_nodes, edges)
+        next_nodes_to_be_added, next_nodes_to_be_added_names = remove_incompatible_nodes(next_nodes_to_be_added,
+                                                                                         next_nodes_to_be_added_names,
+                                                                                         edges)
+        end_nodes_order = sort_nodes(next_nodes_to_be_added)
+        end_edges_order, end_nodes_order = edge_order_management(end_nodes_order, circuit_names, edges,
+                                                                 next_nodes_to_be_added_names)
         m = permutation_matrix(start_edges_order, end_edges_order)
         if matrix is None:
-            matrix = m
+            matrix = np.matrix(m, dtype=complex)
         else:
-            matrix = np.dot(matrix, m)
-        m = 1
-        # TODO : penser à retirer les sorties
-        nodes_matrices = nodes_matrix(next_nodes_to_be_added)
+            matrix = np.dot(m, matrix)
+        m = np.full((1, 1), 1, dtype=complex)
+        # TODO : penser à retirer les sorties et ajouter les I/O
+        computational_nodes = end_nodes_order
+        for node in computational_nodes:
+            for node_name in node:
+                if node_name in end_nodes_names:
+                    del node
+        nodes_matrices = nodes_matrix(computational_nodes)
         for node_matrix in nodes_matrices:
-            m = np.tensordot(m, node_matrix)
+            m = tensor_product(m, node_matrix)
         # TODO : penser à ajouter les fils allant vers les sorties
         for edge in edges:
-            if ((edge[0] in circuit and edge[1] not in circuit + next_nodes_to_be_added)
-                    and (edge[1] in circuit and edge[0] not in circuit + next_nodes_to_be_added)):
-                m = np.tensordot(m, np.identity(2))
-        matrix = np.dot(matrix, m)
+            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
+                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
+                m = tensor_product(m, np.identity(2, dtype=complex))
+        matrix = np.dot(m, matrix)
         start_nodes_order = end_nodes_order
         start_edges_order = []
         for node in start_nodes_order:
-            for edge in edges:
-                if node in edge:
-                    start_edges_order.append(edge)
-        for edge in edges:
-            if ((edge[0] in circuit and edge[1] not in circuit + next_nodes_to_be_added)
-                    and (edge[1] in circuit and edge[0] not in circuit + next_nodes_to_be_added)):
+            for node_name in node:
+                for edge in edges:
+                    if (node_name == edge[0] and edge[1] not in circuit_names) or \
+                            (node_name == edge[1] and edge[0] not in circuit_names):
+                        start_edges_order.append(edge)
+        for edge in edges:  # TODO problème potentiel d'ordre des fils ici !
+            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
+                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
                 start_edges_order.append(edge)
         circuit = circuit + next_nodes_to_be_added
+        circuit_names = circuit_names + next_nodes_to_be_added_names
     return matrix
 
 
@@ -97,6 +105,49 @@ def sort_nodes(nodes_list):
     return nodes_list_sorted
 
 
+def edge_order_management(end_nodes_order, circuit_names, edges, next_nodes_to_be_added_names):
+    end_edges_order = []
+    for node in end_nodes_order:
+        for node_name in node:
+            node[node_name]['edge_in'] = []
+            node[node_name]['edge_out'] = []
+            for edge in edges:
+                if edge not in end_edges_order:
+                    if (edge[0] == node_name and edge[1] in circuit_names) or \
+                            (edge[1] == node_name and edge[0] in circuit_names):
+                        end_edges_order.append(edge)
+                        node[node_name]['edge_in'].append(edge)
+                    if (edge[0] == node_name and edge[1] not in circuit_names) or \
+                            (edge[1] == node_name and edge[0] not in circuit_names):
+                        node[node_name]['edge_out'].append(edge)
+    for edge in edges:
+        if edge not in end_edges_order:
+            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
+                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
+                end_edges_order.append(edge)
+    return end_edges_order, end_nodes_order
+
+
+def remove_incompatible_nodes(nodes_list, nodes_list_names, edges):
+    """
+
+    Args:
+        nodes_list:
+        nodes_list_names:
+        edges:
+    Returns:
+        (list[node], list[node_names]): tmp
+    """
+    for edge in edges:
+        if edge[0] in nodes_list_names and edge[1] in nodes_list_names:
+            nodes_list_names.remove(edge[0])
+            for node in nodes_list:
+                for node_name in node:
+                    if node_name == edge[0]:
+                        nodes_list.remove(node)
+    return nodes_list, nodes_list_names
+
+
 def neighbours(subset, main_set, edges):
     """Returns the neighbours of *subset* in *set*.
 
@@ -107,19 +158,22 @@ def neighbours(subset, main_set, edges):
         main_set (list[node]): The global set containing the subset and possibly more
         edges (list[(node_name,node_name)]): The list of relations between elements of the set
     Returns:
-        list[node]: A list (possibly empty) of elements in *set*, these are all the neighbours of *subset*
+        (list[node], list[node_names]): A list (possibly empty) of elements in *set*, these are all the neighbours of *subset*
     """
     subset_dictionary = nodes_list_to_nodes_dictionary(subset)
     print(subset_dictionary)
     main_set_dictionary = nodes_list_to_nodes_dictionary(main_set)
     print(main_set_dictionary)
     neighbours_set = []
+    neighbours_set_names = []
     for edge in edges:
-        if edge[0] in subset_dictionary and edge[1] not in subset_dictionary:
+        if edge[0] in subset_dictionary and edge[1] not in subset_dictionary and edge[1] not in neighbours_set_names:
             neighbours_set.append({edge[1]: main_set_dictionary[edge[1]]})
-        elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary:
+            neighbours_set_names.append(edge[1])
+        elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary and edge[0] not in neighbours_set_names:
             neighbours_set.append({edge[0]: main_set_dictionary[edge[0]]})
-    return neighbours_set
+            neighbours_set_names.append(edge[0])
+    return neighbours_set, neighbours_set_names
 
 
 def permutation_matrix(pre_permutation_list, post_permutation_list):
@@ -132,7 +186,7 @@ def permutation_matrix(pre_permutation_list, post_permutation_list):
         matrix[complex]: qbits permutation matrix
     """
     n = len(pre_permutation_list)
-    matrix = np.identity(pow(2, n))
+    matrix = np.identity(pow(2, n), dtype=complex)
     for i in np.arange(n):
         if pre_permutation_list[i] == post_permutation_list[i]:
             continue
@@ -144,7 +198,7 @@ def permutation_matrix(pre_permutation_list, post_permutation_list):
                     permutation = two_wires_permutation_matrix(i, j, n)
                     matrix = np.dot(matrix, permutation)
                     post_permutation_list[i], post_permutation_list[j] = post_permutation_list[j], \
-                        post_permutation_list[i]
+                                                                         post_permutation_list[i]
     return matrix
 
 
@@ -159,12 +213,12 @@ def tensor_product(a, b):
     Returns:
         matrix: Tensor product of a and b
     """
-    matrix_a = np.array(a)
-    matrix_b = np.array(b)
+    matrix_a = np.array(a, dtype=complex)
+    matrix_b = np.array(b, dtype=complex)
     ma, na = matrix_a.shape
     mb, nb = matrix_b.shape
     mr, nr = ma * mb, na * nb
-    result = np.zeros((mr, nr))
+    result = np.zeros((mr, nr), dtype=complex)
     for i in np.arange(mr):
         for j in np.arange(nr):
             result[i][j] = matrix_a[int(i / mb)][int(j / nb)] * matrix_b[i % mb][j % nb]
@@ -189,7 +243,14 @@ def tensor_power(a, power):
 
 
 def nodes_matrix(nodes):  # TODO check if the calculus are correct
-    """Returns the list of matrices corresponding to each node
+    """Returns the list of matrices corresponding to each node.
+
+    This function is the only one that uses the registered angles from the file. Extra caution has to be taken since
+    the format can be :
+        - a number or fraction, then Pi is implied
+        - a number or fraction multiplied by Pi, then, Pi has to be parsed (not done in native python)
+    Moreover, the number registration format may be rethink to : accelerate calculations, save memory, have more \
+    precise calculations
 
     Args:
         nodes (list[node]): Node list which will give one matrix for each node
@@ -214,13 +275,18 @@ def nodes_matrix(nodes):  # TODO check if the calculus are correct
                     matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
                 elif node_func[node_name_func]['data']['type'] == 'Z':
                     # Z node, angle node_func[node_name_func]['data']['value']
-                    alpha = float(node_func[node_name_func]['data']['value'])
+                    alpha = node_func[node_name_func]['data']['value']
+                    alpha.replace('Pi', '1')
+                    alpha = float(eval(alpha))  # TODO : do it better, possible code injection here
                     matrix_func[0][0] = 1
-                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(alpha * 1j)
+                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                 else:
                     # X node, angle node_func[node_name_func]['data']['value']
-                    alpha = float(node_func[node_name_func]['data']['value'])
-                    matrix_func[0][0], matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1, cmath.exp(alpha * 1j)
+                    alpha = node_func[node_name_func]['data']['value']
+                    alpha.replace('Pi', '1')
+                    alpha = float(eval(alpha))  # TODO : do it better, possible code injection here
+                    matrix_func[0][0] = 1
+                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
                     matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
             matrix_list.append(matrix_func)

@@ -92,6 +92,8 @@ html_theme = 'classic'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['../_static']
 
+html_favicon = '../_static/quantomatic.ico'
+
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 #
@@ -101,6 +103,11 @@ html_static_path = ['../_static']
 # 'searchbox.html']``.
 #
 html_sidebars = {'**': ['localtoc.html', 'relations.html', 'searchbox.html']}
+
+
+html_context = {
+    'css_files': ['_static/no-justify.css'],
+}
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
