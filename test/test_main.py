@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import math
 
 import q_functions as qf
 
@@ -52,9 +53,9 @@ def test_sort_nodes_enabled():
     sorted_node_list = qf.sort_nodes(node_list)
     # sorted_node_list = node_list
 
-    for i in np.arange(len(sorted_node_list)-1):
+    for i in np.arange(len(sorted_node_list) - 1):
         for node_name1 in sorted_node_list[i]:
-            for node_name2 in sorted_node_list[i+1]:
+            for node_name2 in sorted_node_list[i + 1]:
                 assert node_name1 <= node_name2
 
 
@@ -91,9 +92,9 @@ def test_sort_nodes_disabled():
     sorted_node_list = node_list
 
     sorted_bool = True
-    for i in np.arange(len(sorted_node_list)-1):
+    for i in np.arange(len(sorted_node_list) - 1):
         for node_name1 in sorted_node_list[i]:
-            for node_name2 in sorted_node_list[i+1]:
+            for node_name2 in sorted_node_list[i + 1]:
                 if node_name1 > node_name2:
                     sorted_bool = False
     assert not sorted_bool
@@ -137,3 +138,69 @@ def test_neighbours():
     result = [['v0', 'v2'],
               ['v2', 'v0']]
     assert next_nodes_to_be_added_names in result
+
+
+def test_node_matrix_z():
+    node = {'v6': {
+        'edge_out': [['v2', 'v6'], ['v0', 'v6']],
+        'edge_in': [['v6', 'b1']],
+        'data': {'type': 'Z', 'value': '1'}}}
+    result = np.linalg.norm(qf.nodes_matrix([node])[0] - np.matrix([[1, 0], [0, 0], [0, 0], [0, -1]]))
+    assert result < 10**(-10)
+
+
+def test_node_matrix_x():
+    node = {'v6': {
+        'edge_out': [['v2', 'v6'], ['v0', 'v6']],
+        'edge_in': [['v6', 'b1']],
+        'data': {'type': 'X', 'value': '1'}}}
+    result = np.linalg.norm(qf.nodes_matrix([node])[0] - np.matrix([[0, 1], [1, 0], [1, 0], [0, 1]])/math.sqrt(2))
+    assert result < 10**(-10)
+
+
+def test_permutation_matrix():
+    start = [['v0', 'v2'], ['v1', 'v0'], ['v1', 'b1']]
+    end = [['v0', 'v2'], ['v1', 'b1'], ['v1', 'v0']]
+    # expected_result = np.zeros((16, 16), dtype=complex)
+    # expected_result[0][0] = 1
+    # expected_result[2][1] = 1
+    # expected_result[4][2] = 1
+    # expected_result[6][3] = 1
+    # expected_result[1][4] = 1
+    # expected_result[3][5] = 1
+    # expected_result[5][6] = 1
+    # expected_result[7][7] = 1
+    # expected_result[8][8] = 1
+    # expected_result[10][9] = 1
+    # expected_result[12][10] = 1
+    # expected_result[14][11] = 1
+    # expected_result[9][12] = 1
+    # expected_result[11][13] = 1
+    # expected_result[13][14] = 1
+    # expected_result[15][15] = 1
+    permutation = np.matrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=complex)
+    # expected_result = qf.tensor_product(np.identity(2, dtype=complex), permutation)
+    expected_result = qf.tensor_product(permutation, np.identity(2, dtype=complex))
+    np.set_printoptions(linewidth=200)
+    # print(expected_result)
+    actual_result = qf.permutation_matrix(start, end)
+    # print(actual_result)
+    assert not (actual_result - expected_result).any()
+
+
+def test_binary_dictionary_to_int():
+    dictionary = {0: 1, 1: 1, 2: 0}
+    assert qf.binary_dictionary_to_int(dictionary) == 3
+
+
+def test_image_by_permutation():
+    dictionary = {0: 1, 1: 2, 2: 0}
+    assert qf.image_by_permutation(dictionary, 5) == 6
+
+
+def test_build_permutation_dictionary():
+    pre = [1, 2, 3]
+    post = [2, 1, 3]
+    expected_result = {0: 1, 1: 0, 2: 2}
+    actual_result = qf.build_permutation_dictionary(pre, post)
+    assert expected_result == actual_result

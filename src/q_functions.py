@@ -26,61 +26,77 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     for node in start_nodes:
         for node_name in node:
             circuit_names.append(node_name)
-    start_nodes_order = sort_nodes(circuit)
-    start_edges_order = []
-    for node in start_nodes_order:
+    pre_permutation_nodes_order = sort_nodes(circuit)
+    pre_permutation_edges_order = []
+    for node in pre_permutation_nodes_order:
         for node_name in node:
             for edge in edges:
                 if node_name in edge:
-                    start_edges_order.append(edge)
+                    pre_permutation_edges_order.append(edge)
     end_nodes_names = []
     for node in end_nodes:
         for node_name in node:
             end_nodes_names.append(node_name)
-    while end_nodes not in circuit:
+    while not end_detection(circuit_names, inside_nodes):
         next_nodes_to_be_added, next_nodes_to_be_added_names = neighbours(circuit, inside_nodes + end_nodes, edges)
         next_nodes_to_be_added, next_nodes_to_be_added_names = remove_incompatible_nodes(next_nodes_to_be_added,
                                                                                          next_nodes_to_be_added_names,
                                                                                          edges)
-        end_nodes_order = sort_nodes(next_nodes_to_be_added)
-        end_edges_order, end_nodes_order = edge_order_management(end_nodes_order, circuit_names, edges,
-                                                                 next_nodes_to_be_added_names)
-        m = permutation_matrix(start_edges_order, end_edges_order)
+        post_permutation_nodes_order = sort_nodes(next_nodes_to_be_added)
+        post_permutation_edges_order, post_permutation_nodes_order = post_permutation_edge_order_management(
+            post_permutation_nodes_order, circuit_names, edges, next_nodes_to_be_added_names)
+        m = permutation_matrix(pre_permutation_edges_order, post_permutation_edges_order)
         if matrix is None:
             matrix = np.matrix(m, dtype=complex)
         else:
             matrix = np.dot(m, matrix)
         m = np.full((1, 1), 1, dtype=complex)
-        # TODO : penser à retirer les sorties et ajouter les I/O
-        computational_nodes = end_nodes_order
+        computational_nodes = list(post_permutation_nodes_order)
         for node in computational_nodes:
             for node_name in node:
                 if node_name in end_nodes_names:
-                    del node
+                    del computational_nodes[computational_nodes.index(node)]
         nodes_matrices = nodes_matrix(computational_nodes)
         for node_matrix in nodes_matrices:
             m = tensor_product(m, node_matrix)
-        # TODO : penser à ajouter les fils allant vers les sorties
+        pre_permutation_nodes_name = []
+        for node in start_nodes:
+            for node_name in node:
+                pre_permutation_nodes_name.append(node_name)
+        inside_neighbours = set(circuit_names + next_nodes_to_be_added_names + pre_permutation_nodes_name) - set(
+            end_nodes_names)
         for edge in edges:
-            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
-                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
+            if ((edge[0] in circuit_names and edge[1] not in inside_neighbours)
+                    or (edge[1] in circuit_names and edge[0] not in inside_neighbours)):
                 m = tensor_product(m, np.identity(2, dtype=complex))
         matrix = np.dot(m, matrix)
-        start_nodes_order = end_nodes_order
-        start_edges_order = []
-        for node in start_nodes_order:
-            for node_name in node:
-                for edge in edges:
-                    if (node_name == edge[0] and edge[1] not in circuit_names) or \
-                            (node_name == edge[1] and edge[0] not in circuit_names):
-                        start_edges_order.append(edge)
-        for edge in edges:  # TODO problème potentiel d'ordre des fils ici !
-            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
-                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
-                start_edges_order.append(edge)
+        pre_permutation_nodes_order = post_permutation_nodes_order
+        pre_permutation_edges_order = pre_permutation_edge_order_management(pre_permutation_nodes_order,
+                                                                            edges,
+                                                                            circuit_names,
+                                                                            next_nodes_to_be_added_names)
+        next_nodes_to_be_added, next_nodes_to_be_added_names = remove_end_nodes_neighbours(next_nodes_to_be_added,
+                                                                                           next_nodes_to_be_added_names,
+                                                                                           end_nodes_names)
         circuit = circuit + next_nodes_to_be_added
         circuit_names = circuit_names + next_nodes_to_be_added_names
     return matrix
+
+
+def end_detection(circuit_names, inside_nodes):
+    """Detects if all the end nodes are in the circuit. If so, end is reached, returns True. Else, returns false
+
+    Args:
+        circuit_names:
+        inside_nodes:
+    Returns:
+         bool: End reached
+    """
+    for node in inside_nodes:
+        for node_name in node:
+            if node_name not in circuit_names:
+                return False
+    return True
 
 
 def sort_nodes(nodes_list):
@@ -94,10 +110,16 @@ def sort_nodes(nodes_list):
         list[node]: The sorted nodes list
     """
     nodes_dictionary = nodes_list_to_nodes_dictionary(nodes_list)
-    node_name_list = []
+    node_name_list_gate = []
+    node_name_list_wire = []
     for node_name in nodes_dictionary:
-        node_name_list.append(node_name)
-    node_name_list.sort()
+        if 'b' not in node_name:
+            node_name_list_gate.append(node_name)
+        else:
+            node_name_list_wire.append(node_name)
+    node_name_list_gate.sort()
+    node_name_list_wire.sort()
+    node_name_list = node_name_list_gate + node_name_list_wire
 
     nodes_list_sorted = []
     for node_name_sorted in node_name_list:
@@ -105,7 +127,41 @@ def sort_nodes(nodes_list):
     return nodes_list_sorted
 
 
-def edge_order_management(end_nodes_order, circuit_names, edges, next_nodes_to_be_added_names):
+def remove_end_nodes_neighbours(next_nodes_to_be_added, next_nodes_to_be_added_names, end_nodes_names):
+    for node in next_nodes_to_be_added:
+        for node_name in node:
+            if node_name in end_nodes_names:
+                del next_nodes_to_be_added[next_nodes_to_be_added.index(node)]
+                del next_nodes_to_be_added_names[next_nodes_to_be_added_names.index(node_name)]
+    return next_nodes_to_be_added, next_nodes_to_be_added_names
+
+
+def pre_permutation_edge_order_management(start_nodes_order, edges, circuit_names, next_nodes_to_be_added_names):
+    start_edges_order = []
+    for node in start_nodes_order:
+        for node_name in node:
+            for edge in edges:
+                if (node_name == edge[0] and edge[1] not in circuit_names) or \
+                        (node_name == edge[1] and edge[0] not in circuit_names):
+                    start_edges_order.append(edge)
+    for edge in edges:  # TODO problème potentiel d'ordre des fils ici !
+        if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
+                or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
+            start_edges_order.append(edge)
+    return start_edges_order
+
+
+def post_permutation_edge_order_management(end_nodes_order, circuit_names, edges, next_nodes_to_be_added_names):
+    """Adds the data for each node of the ins and outs for each one.
+    Creates also the *end_edges_order* with the edges reaching the neighbours nodes first, and then the edges reaching
+    future nodes.
+
+    :param end_nodes_order:
+    :param circuit_names:
+    :param edges:
+    :param next_nodes_to_be_added_names:
+    :return:
+    """
     end_edges_order = []
     for node in end_nodes_order:
         for node_name in node:
@@ -161,9 +217,7 @@ def neighbours(subset, main_set, edges):
         (list[node], list[node_names]): A list (possibly empty) of elements in *set*, these are all the neighbours of *subset*
     """
     subset_dictionary = nodes_list_to_nodes_dictionary(subset)
-    print(subset_dictionary)
     main_set_dictionary = nodes_list_to_nodes_dictionary(main_set)
-    print(main_set_dictionary)
     neighbours_set = []
     neighbours_set_names = []
     for edge in edges:
@@ -185,21 +239,41 @@ def permutation_matrix(pre_permutation_list, post_permutation_list):
     Returns:
         matrix[complex]: qbits permutation matrix
     """
-    n = len(pre_permutation_list)
-    matrix = np.identity(pow(2, n), dtype=complex)
+    length = len(pre_permutation_list)
+    n = pow(2, length)
+    matrix = np.zeros((n, n), dtype=complex)
+    permutation_dic = build_permutation_dictionary(pre_permutation_list, post_permutation_list)
     for i in np.arange(n):
-        if pre_permutation_list[i] == post_permutation_list[i]:
-            continue
-        else:
-            for j in np.arange(i + 1, n):
-                if pre_permutation_list[i] != post_permutation_list[j]:
-                    continue
-                else:
-                    permutation = two_wires_permutation_matrix(i, j, n)
-                    matrix = np.dot(matrix, permutation)
-                    post_permutation_list[i], post_permutation_list[j] = post_permutation_list[j], \
-                                                                         post_permutation_list[i]
+        j = image_by_permutation(permutation_dic, i)
+        matrix[i][j] = 1
     return matrix
+
+
+def build_permutation_dictionary(pre_permutation_list, post_permutation_list):
+    length = len(pre_permutation_list)
+    permutation_dic = {}
+    for i in np.arange(length):
+        for j in np.arange(length):
+            if pre_permutation_list[i] == post_permutation_list[j]:
+                permutation_dic[i] = j
+                break
+    return permutation_dic
+
+
+def image_by_permutation(permutation_dictionary, n):
+    length = len(permutation_dictionary)
+    image = {}
+    for i in np.arange(length):
+        image[i] = digit(n, permutation_dictionary[i])
+    return binary_dictionary_to_int(image)
+
+
+def binary_dictionary_to_int(binary_dictionary):
+    length = len(binary_dictionary)
+    result = 0
+    for i in np.arange(length):
+        result += pow(2, i) * binary_dictionary[i]
+    return result
 
 
 def tensor_product(a, b):
@@ -229,6 +303,7 @@ def tensor_power(a, power):
     """Computes the *a**power*, in the tensor sense
 
     *a* has to be a matrix (numpy matrix or 2-D array)
+    *power* must be positive (or equal to 0)
 
     Args:
         a (matrix): First argument
@@ -236,10 +311,12 @@ def tensor_power(a, power):
     Returns:
         matrix: 'power'
     """
-    result = np.identity(a.shape[0])
-    for _ in np.arange(power):
-        result = tensor_product(result, a)
-    return result
+    if power < 0:
+        raise NameError('Tensor power not defined for a negative power')
+    if power == 0:
+        return np.identity(1)
+    else:
+        return tensor_product(a, tensor_power(a, power - 1))
 
 
 def nodes_matrix(nodes):  # TODO check if the calculus are correct
@@ -272,7 +349,10 @@ def nodes_matrix(nodes):  # TODO check if the calculus are correct
                     # X node, angle 0
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1
-                    matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
+                    a = tensor_power(h, m)
+                    b = tensor_power(h, n)
+                    matrix_func = np.dot(a, matrix_func)
+                    matrix_func = np.dot(matrix_func, b)
                 elif node_func[node_name_func]['data']['type'] == 'Z':
                     # Z node, angle node_func[node_name_func]['data']['value']
                     alpha = node_func[node_name_func]['data']['value']
@@ -288,7 +368,10 @@ def nodes_matrix(nodes):  # TODO check if the calculus are correct
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
-                    matrix_func = np.dot(tensor_power(h, m - 1), np.dot(matrix_func, tensor_power(h, n - 1)))
+                    a = tensor_power(h, m)
+                    b = tensor_power(h, n)
+                    matrix_func = np.dot(a, matrix_func)
+                    matrix_func = np.dot(matrix_func, b)
             matrix_list.append(matrix_func)
     return matrix_list
 

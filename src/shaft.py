@@ -314,5 +314,9 @@ for matrix in nodes_matrix(node_list):
 # print(node_list[1]['v8']['edge_in'])
 # print(len(node_list[1]['v8']['edge_in']))
 
-test = float(eval('math.pi/2'))
+test = [1, 2, 3, 4, 5]
+print(test)
+for number in test:
+    if number == 3:
+        del test[test.index(3)]
 print(test)
