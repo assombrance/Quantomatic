@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 
-def main_algo(start_nodes, end_nodes, inside_nodes, edges):
+def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
     """Takes as input a ZX-calculus diagram and returns the corresponding matrix.
 
     This is the naive algorithm version: it isn't optimised whatsoever, so expect terrible performances.
@@ -37,7 +37,7 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     for node in end_nodes:
         for node_name in node:
             end_nodes_names.append(node_name)
-    while not end_detection(circuit_names, inside_nodes):
+    while not end_detection_main_algo(circuit_names, inside_nodes):
         next_nodes_to_be_added, next_nodes_to_be_added_names = neighbours(circuit, inside_nodes + end_nodes, edges)
         next_nodes_to_be_added, next_nodes_to_be_added_names = remove_incompatible_nodes(next_nodes_to_be_added,
                                                                                          next_nodes_to_be_added_names,
@@ -83,7 +83,83 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     return matrix
 
 
-def end_detection(circuit_names, inside_nodes):
+def main_algo(start_nodes, end_nodes, inside_nodes, edges):
+    connected_graphs = split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges)
+    matrix_list = []
+    for graph in connected_graphs: # TODO 3 attention, à ce point c'est presque du pseudo code
+        if start_nodes in graph:
+            matrix_list.append(connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges))
+        elif end_nodes in graph:
+            matrix_list.append(np.matrix(connected_graph_matrix(end_nodes, start_nodes,
+                                                                inside_nodes, edges)).transpose())
+        else:
+            print('find something to do here')
+    result = [[1]]
+    for matrix in matrix_list:  # TODO 4 attention à l'ordre des entrées et sorties ici !
+        result = tensor_product(matrix)
+    return result
+
+
+def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
+    # TODO 1 potentiellement plein de problèmes de passages entre liste et dico
+    connected_graphs = []
+    while not end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
+        root = choose_root(inside_nodes, connected_graphs)
+        graph = build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges)
+        connected_graphs.append(graph)
+    return connected_graphs
+
+
+def build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges):
+    old_connected_graph = {}
+    connected_graph = {'start_nodes': [], 'end_nodes': [], 'inside_nodes': [root]}
+    while old_connected_graph != connected_graph:  # TODO 2 problème potentiel de copie
+        old_connected_graph, connected_graph = connected_graph, augment_graph(connected_graph, start_nodes, end_nodes,
+                                                                              inside_nodes, edges)
+    return connected_graph
+
+
+def augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges):
+    node_set = start_nodes + end_nodes + inside_nodes
+    initial_node_set = connected_graph['start_nodes'] + connected_graph['end_nodes'] + connected_graph['inside_nodes']
+    nodes_neighbours = neighbours(initial_node_set, node_set, edges)
+    for node in nodes_neighbours:
+        for node_name in node:
+            if node_name in start_nodes:
+                connected_graph['start_nodes'].append(node)
+            if node_name in end_nodes:
+                connected_graph['end_nodes'].append(node)
+            if node_name in inside_nodes:
+                connected_graph['inside_nodes'].append(node)
+    return connected_graph
+
+
+def choose_root(inside_nodes, connected_graphs):
+    remaining_nodes = list(inside_nodes)
+    for connected_graph in connected_graphs:
+        for node in connected_graph['inside_nodes']:
+            if node in remaining_nodes:
+                del remaining_nodes[remaining_nodes.index(node)]
+    return remaining_nodes[0]
+
+
+def end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
+    current_start_nodes = {}
+    current_end_nodes = {}
+    current_inside_nodes = {}
+    for connected_graph in connected_graphs:
+        for node_name in connected_graph['start_nodes']:
+            current_start_nodes[node_name] = connected_graph['start_nodes'][node_name]
+        for node_name in connected_graph['end_nodes']:
+            current_end_nodes[node_name] = connected_graph['end_nodes'][node_name]
+        for node_name in connected_graph['inside_nodes']:
+            current_inside_nodes[node_name] = connected_graph['inside_nodes'][node_name]
+    return (current_start_nodes == start_nodes and
+            current_end_nodes == end_nodes and
+            current_inside_nodes == inside_nodes)
+
+
+def end_detection_main_algo(circuit_names, inside_nodes):
     """Detects if all the end nodes are in the circuit. If so, end is reached, returns True. Else, returns false
 
     Args:

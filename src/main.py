@@ -35,7 +35,7 @@ def main(diagram_file_path, inputs_list):
         for node in undir_edges_dictionary[edge_dictionary]:
             edge.append(undir_edges_dictionary[edge_dictionary][node])
         edges_list.append(edge)
-    return qf.main_algo(start_nodes, end_nodes, inside_nodes, edges_list)
+    return qf.connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges_list)
 
 
 def debug(diagram_file_path):
@@ -56,5 +56,5 @@ def debug(diagram_file_path):
 
 
 # debug('D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project-1.1/graphs/sample.qgraph')
-print(main('D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project-1.1/graphs/test.qgraph',
+print(main('D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project-1.1/graphs/sample.qgraph',
            ['b0', 'b1']))
