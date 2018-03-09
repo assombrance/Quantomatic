@@ -254,7 +254,7 @@ def build_permutation_dictionary(pre_permutation_list, post_permutation_list):
     permutation_dic = {}
     for i in np.arange(length):
         for j in np.arange(length):
-            if pre_permutation_list[i] == post_permutation_list[j]:
+            if pre_permutation_list[length - 1 - i] == post_permutation_list[length - 1 - j]:
                 permutation_dic[i] = j
                 break
     return permutation_dic

@@ -159,8 +159,8 @@ def test_node_matrix_x():
 
 
 def test_permutation_matrix():
-    start = [['v0', 'v2'], ['v1', 'v0'], ['v1', 'b1']]
-    end = [['v0', 'v2'], ['v1', 'b1'], ['v1', 'v0']]
+    start = [['v0', 'v1'], ['v2', 'v1'], ['v0', 'b0']]
+    end = [['v0', 'v1'], ['v0', 'b0'], ['v2', 'v1']]
     # expected_result = np.zeros((16, 16), dtype=complex)
     # expected_result[0][0] = 1
     # expected_result[2][1] = 1
@@ -180,7 +180,7 @@ def test_permutation_matrix():
     # expected_result[15][15] = 1
     permutation = np.matrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=complex)
     # expected_result = qf.tensor_product(np.identity(2, dtype=complex), permutation)
-    expected_result = qf.tensor_product(permutation, np.identity(2, dtype=complex))
+    expected_result = qf.tensor_product(np.identity(2, dtype=complex), permutation)
     np.set_printoptions(linewidth=200)
     # print(expected_result)
     actual_result = qf.permutation_matrix(start, end)
@@ -201,6 +201,9 @@ def test_image_by_permutation():
 def test_build_permutation_dictionary():
     pre = [1, 2, 3]
     post = [2, 1, 3]
-    expected_result = {0: 1, 1: 0, 2: 2}
+    # careful : binary representations are big-endian, so expected result may be a bit counter intuitive
+    expected_result = {0: 0, 1: 2, 2: 1}
     actual_result = qf.build_permutation_dictionary(pre, post)
     assert expected_result == actual_result
+
+
