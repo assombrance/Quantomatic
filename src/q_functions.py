@@ -38,7 +38,7 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
         for node_name in node:
             end_nodes_names.append(node_name)
     while not end_detection_main_algo(circuit_names, inside_nodes):
-        next_nodes_to_be_added, next_nodes_to_be_added_names = neighbours(circuit, inside_nodes + end_nodes, edges)
+        next_nodes_to_be_added, next_nodes_to_be_added_names, _ = neighbours(circuit, inside_nodes + end_nodes, edges)
         next_nodes_to_be_added, next_nodes_to_be_added_names = remove_incompatible_nodes(next_nodes_to_be_added,
                                                                                          next_nodes_to_be_added_names,
                                                                                          edges)
@@ -86,22 +86,23 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
 def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     connected_graphs = split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges)
     matrix_list = []
-    for graph in connected_graphs: # TODO 3 attention, à ce point c'est presque du pseudo code
-        if start_nodes in graph:
-            matrix_list.append(connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges))
-        elif end_nodes in graph:
-            matrix_list.append(np.matrix(connected_graph_matrix(end_nodes, start_nodes,
-                                                                inside_nodes, edges)).transpose())
+    for graph in connected_graphs:
+        if graph['start_nodes']:
+            matrix_list.append(connected_graph_matrix(graph['start_nodes'], graph['end_nodes'],
+                                                      graph['inside_nodes'], graph['edges']))
+        elif graph['end_nodes']:
+            matrix_list.append(np.matrix(connected_graph_matrix(graph['end_nodes'], [],
+                                                                graph['inside_nodes'], graph['edges'])).transpose())
         else:
             print('find something to do here')
+    print(matrix_list)
     result = [[1]]
-    for matrix in matrix_list:  # TODO 4 attention à l'ordre des entrées et sorties ici !
-        result = tensor_product(matrix)
+    for matrix in matrix_list:  # TODO attention à l'ordre des entrées et sorties ici !
+        result = tensor_product(result, matrix)
     return result
 
 
 def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
-    # TODO 1 potentiellement plein de problèmes de passages entre liste et dico
     connected_graphs = []
     while not end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
         root = choose_root(inside_nodes, connected_graphs)
@@ -111,27 +112,37 @@ def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
 
 
 def build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges):
-    old_connected_graph = {}
-    connected_graph = {'start_nodes': [], 'end_nodes': [], 'inside_nodes': [root]}
-    while old_connected_graph != connected_graph:  # TODO 2 problème potentiel de copie
-        old_connected_graph, connected_graph = connected_graph, augment_graph(connected_graph, start_nodes, end_nodes,
-                                                                              inside_nodes, edges)
+    changed = True
+    connected_graph = {'start_nodes': [], 'end_nodes': [], 'inside_nodes': [root], 'edges': []}
+    while changed:
+        connected_graph, changed = augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges)
     return connected_graph
 
 
 def augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges):
     node_set = start_nodes + end_nodes + inside_nodes
     initial_node_set = connected_graph['start_nodes'] + connected_graph['end_nodes'] + connected_graph['inside_nodes']
-    nodes_neighbours = neighbours(initial_node_set, node_set, edges)
+    nodes_neighbours, _, connection_edges = neighbours(initial_node_set, node_set, edges)
+    connected_graph['edges'] = connected_graph['edges'] + connection_edges
+    change_done = False
     for node in nodes_neighbours:
         for node_name in node:
-            if node_name in start_nodes:
-                connected_graph['start_nodes'].append(node)
-            if node_name in end_nodes:
-                connected_graph['end_nodes'].append(node)
-            if node_name in inside_nodes:
-                connected_graph['inside_nodes'].append(node)
-    return connected_graph
+            for start_node in start_nodes:
+                for start_node_name in start_node:
+                    if node_name == start_node_name:
+                        connected_graph['start_nodes'].append(node)
+                        change_done = True
+            for end_node in end_nodes:
+                for end_node_name in end_node:
+                    if node_name == end_node_name:
+                        connected_graph['end_nodes'].append(node)
+                        change_done = True
+            for inside_node in inside_nodes:
+                for inside_node_name in inside_node:
+                    if node_name == inside_node_name:
+                        connected_graph['inside_nodes'].append(node)
+                        change_done = True
+    return connected_graph, change_done
 
 
 def choose_root(inside_nodes, connected_graphs):
@@ -143,20 +154,21 @@ def choose_root(inside_nodes, connected_graphs):
     return remaining_nodes[0]
 
 
+def symmetric_difference(x, y):
+    return [i for i in x if i not in y] + [i for i in y if i not in x]
+
+
 def end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
-    current_start_nodes = {}
-    current_end_nodes = {}
-    current_inside_nodes = {}
+    current_start_nodes = []
+    current_end_nodes = []
+    current_inside_nodes = []
     for connected_graph in connected_graphs:
-        for node_name in connected_graph['start_nodes']:
-            current_start_nodes[node_name] = connected_graph['start_nodes'][node_name]
-        for node_name in connected_graph['end_nodes']:
-            current_end_nodes[node_name] = connected_graph['end_nodes'][node_name]
-        for node_name in connected_graph['inside_nodes']:
-            current_inside_nodes[node_name] = connected_graph['inside_nodes'][node_name]
-    return (current_start_nodes == start_nodes and
-            current_end_nodes == end_nodes and
-            current_inside_nodes == inside_nodes)
+        current_start_nodes = current_start_nodes + connected_graph['start_nodes']
+        current_end_nodes = current_end_nodes + connected_graph['end_nodes']
+        current_inside_nodes = current_inside_nodes + connected_graph['inside_nodes']
+    return (not symmetric_difference(current_start_nodes, start_nodes) and
+            not symmetric_difference(current_end_nodes, end_nodes) and
+            not symmetric_difference(current_inside_nodes, inside_nodes))
 
 
 def end_detection_main_algo(circuit_names, inside_nodes):
@@ -220,7 +232,7 @@ def pre_permutation_edge_order_management(start_nodes_order, edges, circuit_name
                 if (node_name == edge[0] and edge[1] not in circuit_names) or \
                         (node_name == edge[1] and edge[0] not in circuit_names):
                     start_edges_order.append(edge)
-    for edge in edges:  # TODO problème potentiel d'ordre des fils ici !
+    for edge in edges:
         if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
                 or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
             start_edges_order.append(edge)
@@ -296,14 +308,20 @@ def neighbours(subset, main_set, edges):
     main_set_dictionary = nodes_list_to_nodes_dictionary(main_set)
     neighbours_set = []
     neighbours_set_names = []
+    joining_edges = []
     for edge in edges:
         if edge[0] in subset_dictionary and edge[1] not in subset_dictionary and edge[1] not in neighbours_set_names:
             neighbours_set.append({edge[1]: main_set_dictionary[edge[1]]})
             neighbours_set_names.append(edge[1])
+            joining_edges.append(edge)
         elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary and edge[0] not in neighbours_set_names:
             neighbours_set.append({edge[0]: main_set_dictionary[edge[0]]})
             neighbours_set_names.append(edge[0])
-    return neighbours_set, neighbours_set_names
+            joining_edges.append(edge)
+    for edge in edges:
+        if edge[0] in neighbours_set_names and edge[1] in neighbours_set_names:
+            joining_edges.append(edge)
+    return neighbours_set, neighbours_set_names, joining_edges
 
 
 def permutation_matrix(pre_permutation_list, post_permutation_list):
@@ -395,7 +413,7 @@ def tensor_power(a, power):
         return tensor_product(a, tensor_power(a, power - 1))
 
 
-def nodes_matrix(nodes):  # TODO check if the calculus are correct
+def nodes_matrix(nodes):
     """Returns the list of matrices corresponding to each node.
 
     This function is the only one that uses the registered angles from the file. Extra caution has to be taken since

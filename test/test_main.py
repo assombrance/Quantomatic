@@ -134,7 +134,7 @@ def test_neighbours():
                  {'b2': {'annotation': {'boundary': True, 'coord': [0.5, -2.75]}}}]
     edges = [['v0', 'v2'], ['v6', 'v2'], ['b1', 'v6'], ['v5', 'b2'], ['v3', 'v0'], ['v1', 'v9'], ['v1', 'b3'],
              ['v9', 'v2'], ['v1', 'v5'], ['v3', 'v5'], ['v6', 'v0'], ['v2', 'b0']]
-    _, next_nodes_to_be_added_names = qf.neighbours(circuit, inside_nodes + end_nodes, edges)
+    _, next_nodes_to_be_added_names, _ = qf.neighbours(circuit, inside_nodes + end_nodes, edges)
     result = [['v0', 'v2'],
               ['v2', 'v0']]
     assert next_nodes_to_be_added_names in result
@@ -161,30 +161,9 @@ def test_node_matrix_x():
 def test_permutation_matrix():
     start = [['v0', 'v1'], ['v2', 'v1'], ['v0', 'b0']]
     end = [['v0', 'v1'], ['v0', 'b0'], ['v2', 'v1']]
-    # expected_result = np.zeros((16, 16), dtype=complex)
-    # expected_result[0][0] = 1
-    # expected_result[2][1] = 1
-    # expected_result[4][2] = 1
-    # expected_result[6][3] = 1
-    # expected_result[1][4] = 1
-    # expected_result[3][5] = 1
-    # expected_result[5][6] = 1
-    # expected_result[7][7] = 1
-    # expected_result[8][8] = 1
-    # expected_result[10][9] = 1
-    # expected_result[12][10] = 1
-    # expected_result[14][11] = 1
-    # expected_result[9][12] = 1
-    # expected_result[11][13] = 1
-    # expected_result[13][14] = 1
-    # expected_result[15][15] = 1
     permutation = np.matrix([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]], dtype=complex)
-    # expected_result = qf.tensor_product(np.identity(2, dtype=complex), permutation)
     expected_result = qf.tensor_product(np.identity(2, dtype=complex), permutation)
-    np.set_printoptions(linewidth=200)
-    # print(expected_result)
     actual_result = qf.permutation_matrix(start, end)
-    # print(actual_result)
     assert not (actual_result - expected_result).any()
 
 
@@ -207,3 +186,115 @@ def test_build_permutation_dictionary():
     assert expected_result == actual_result
 
 
+def test_choose_root():
+    inside_nodes = [{'v5': {'annotation': {'coord': [0.5, -1.25]}}},
+                    {'v3': {'annotation': {'coord': [0.5, 0.0]}, 'data': {'type': 'hadamard', 'value': ''}}},
+                    {'v2': {'annotation': {'coord': [0.5, 2.5]}, 'data': {'type': 'X', 'value': ''}}},
+                    {'v9': {'annotation': {'coord': [2.0, 1.25]}, 'data': {'type': 'Z', 'value': '1/2'}}},
+                    {'v6': {'annotation': {'coord': [2.0, 3.5]}, 'data': {'type': 'Z', 'value': '1'}}},
+                    {'v1': {'annotation': {'coord': [2.0, 0.0]}, 'data': {'type': 'X', 'value': ''}}},
+                    {'v0': {'annotation': {'coord': [0.5, 1.25]}, 'data': {'type': 'X', 'value': '3/4'}}}]
+    connected_graphs = []
+    root = qf.choose_root(inside_nodes, connected_graphs)
+    for root_name in root:
+        continue
+    assert 'v' in root_name
+
+
+def test_augment_graph():
+    connected_graph = {'start_nodes': [],
+                       'end_nodes': [],
+                       'inside_nodes': [{'v2': {}}],
+                       'edges': []}
+    start_nodes = [{'b0': {}}, {'b1': {}}]
+    end_nodes = [{'b3': {}}, {'b2': {}}]
+    inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
+    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
+             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    augmented_graph, _ = qf.augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges)
+    print(augmented_graph)
+    expected_augmented_graph = {'start_nodes': [],
+                                'end_nodes': [{'b2': {}}],
+                                'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
+                                'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'], ['v1', 'v0']]}
+    assert not qf.symmetric_difference(expected_augmented_graph['start_nodes'], augmented_graph['start_nodes'])
+    assert not qf.symmetric_difference(expected_augmented_graph['end_nodes'], augmented_graph['end_nodes'])
+    assert not qf.symmetric_difference(expected_augmented_graph['inside_nodes'], augmented_graph['inside_nodes'])
+    assert not qf.symmetric_difference(expected_augmented_graph['edges'], augmented_graph['edges'])
+
+
+def test_build_connected_graph():
+    root = {'v2': {}}
+    start_nodes = [{'b0': {}}, {'b1': {}}]
+    end_nodes = [{'b3': {}}, {'b2': {}}]
+    inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
+    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
+             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    connected_graph = qf.build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges)
+    expected_connected_graph = {'start_nodes': [{'b0': {}}, {'b1': {}}],
+                                'end_nodes': [{'b2': {}}],
+                                'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
+                                'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],
+                                          ['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]}
+    assert not qf.symmetric_difference(expected_connected_graph['start_nodes'], connected_graph['start_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graph['end_nodes'], connected_graph['end_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graph['inside_nodes'], connected_graph['inside_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graph['edges'], connected_graph['edges'])
+
+
+def test_end_detection_connected_graphs_true():
+    connected_graphs = [{'start_nodes': [{'b0': {}}, {'b1': {}}],
+                         'end_nodes': [{'b2': {}}],
+                         'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
+                         'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]},
+                        {'start_nodes': [],
+                         'end_nodes': [{'b3': {}}],
+                         'inside_nodes': [{'v3': {}}, {'v4': {}}],
+                         'edges': [['v3', 'v4'], ['v3', 'b3']]}]
+    start_nodes = [{'b0': {}}, {'b1': {}}]
+    end_nodes = [{'b3': {}}, {'b2': {}}]
+    inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
+    assert qf.end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes)
+
+
+def test_end_detection_connected_graphs_false():
+    # 'v1' is missing in the first graph
+    connected_graphs = [{'start_nodes': [{'b0': {}}, {'b1': {}}],
+                         'end_nodes': [{'b2': {}}],
+                         'inside_nodes': [{'v2': {}}, {'v0': {}}],
+                         'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]},
+                        {'start_nodes': [],
+                         'end_nodes': [{'b3': {}}],
+                         'inside_nodes': [{'v3': {}}, {'v4': {}}],
+                         'edges': [['v3', 'v4'], ['v3', 'b3']]}]
+    start_nodes = [{'b0': {}}, {'b1': {}}]
+    end_nodes = [{'b3': {}}, {'b2': {}}]
+    inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
+    assert not qf.end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes)
+
+
+def test_split_in_connected_graphs():
+    start_nodes = [{'b0': {}}, {'b1': {}}]
+    end_nodes = [{'b3': {}}, {'b2': {}}]
+    inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
+    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
+             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    connected_graphs = qf.split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges)
+    expected_connected_graphs = [{'start_nodes': [{'b0': {}}, {'b1': {}}],
+                                  'end_nodes': [{'b2': {}}],
+                                  'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
+                                  'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],
+                                            ['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]},
+                                 {'start_nodes': [],
+                                  'end_nodes': [{'b3': {}}],
+                                  'inside_nodes': [{'v3': {}}, {'v4': {}}],
+                                  'edges': [['v3', 'v4'], ['v3', 'b3']]}]
+    assert not qf.symmetric_difference(expected_connected_graphs[0]['start_nodes'], connected_graphs[0]['start_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[0]['end_nodes'], connected_graphs[0]['end_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[0]['inside_nodes'], connected_graphs[0]['inside_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[0]['edges'], connected_graphs[0]['edges'])
+
+    assert not qf.symmetric_difference(expected_connected_graphs[1]['start_nodes'], connected_graphs[1]['start_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[1]['end_nodes'], connected_graphs[1]['end_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[1]['inside_nodes'], connected_graphs[1]['inside_nodes'])
+    assert not qf.symmetric_difference(expected_connected_graphs[1]['edges'], connected_graphs[1]['edges'])
