@@ -31,8 +31,9 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
     for node in pre_permutation_nodes_order:
         for node_name in node:
             for edge in edges:
-                if node_name in edge:
-                    pre_permutation_edges_order.append(edge)
+                for edge_name in edge:
+                    if node_name in edge[edge_name]:
+                        pre_permutation_edges_order.append(edge)
     end_nodes_names = []
     for node in end_nodes:
         for node_name in node:
@@ -68,9 +69,10 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
         inside_neighbours = set(circuit_names + next_nodes_to_be_added_names + pre_permutation_nodes_name) - set(
             end_nodes_names)
         for edge in edges:
-            if ((edge[0] in circuit_names and edge[1] not in inside_neighbours)
-                    or (edge[1] in circuit_names and edge[0] not in inside_neighbours)):
-                m = tensor_product(m, np.identity(2, dtype=complex))
+            for edge_name in edge:
+                if ((edge[edge_name][0] in circuit_names and edge[edge_name][1] not in inside_neighbours)
+                        or (edge[edge_name][1] in circuit_names and edge[edge_name][0] not in inside_neighbours)):
+                    m = tensor_product(m, np.identity(2, dtype=complex))
         matrix = np.dot(m, matrix)
         pre_permutation_nodes_order = post_permutation_nodes_order
         pre_permutation_edges_order = pre_permutation_edge_order_management(pre_permutation_nodes_order,
@@ -132,7 +134,8 @@ def scalar_matrix(inside_nodes, edges):
             fake_entry = [[1], [1]]
         else:
             fake_entry = np.matrix([[1], [0]]) * math.sqrt(2)
-        return np.dot(connected_graph_matrix([{'co': {}}], [], inside_nodes, edges + [['co', root_name]]), fake_entry)
+        return np.dot(connected_graph_matrix([{'co': {}}], [], inside_nodes, edges + [{'edge_co': ['co', root_name]}]),
+                      fake_entry)
 
 
 def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
@@ -262,13 +265,17 @@ def pre_permutation_edge_order_management(start_nodes_order, edges, circuit_name
     for node in start_nodes_order:
         for node_name in node:
             for edge in edges:
-                if (node_name == edge[0] and edge[1] not in circuit_names) or \
-                        (node_name == edge[1] and edge[0] not in circuit_names):
-                    start_edges_order.append(edge)
+                for edge_name in edge:
+                    if (node_name == edge[edge_name][0] and edge[edge_name][1] not in circuit_names) or \
+                            (node_name == edge[edge_name][1] and edge[edge_name][0] not in circuit_names):
+                        start_edges_order.append(edge)
     for edge in edges:
-        if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
-                or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
-            start_edges_order.append(edge)
+        for edge_name in edge:
+            if ((edge[edge_name][0] in circuit_names and
+                 edge[edge_name][1] not in circuit_names + next_nodes_to_be_added_names)
+                    or (edge[edge_name][1] in circuit_names and
+                        edge[edge_name][0] not in circuit_names + next_nodes_to_be_added_names)):
+                start_edges_order.append(edge)
     return start_edges_order
 
 
@@ -290,18 +297,22 @@ def post_permutation_edge_order_management(end_nodes_order, circuit_names, edges
             node[node_name]['edge_out'] = []
             for edge in edges:
                 if edge not in end_edges_order:
-                    if (edge[0] == node_name and edge[1] in circuit_names) or \
-                            (edge[1] == node_name and edge[0] in circuit_names):
-                        end_edges_order.append(edge)
-                        node[node_name]['edge_in'].append(edge)
-                    if (edge[0] == node_name and edge[1] not in circuit_names) or \
-                            (edge[1] == node_name and edge[0] not in circuit_names):
-                        node[node_name]['edge_out'].append(edge)
+                    for edge_name in edge:
+                        if (edge[edge_name][0] == node_name and edge[edge_name][1] in circuit_names) or \
+                                (edge[edge_name][1] == node_name and edge[edge_name][0] in circuit_names):
+                            end_edges_order.append(edge)
+                            node[node_name]['edge_in'].append(edge)
+                        if (edge[edge_name][0] == node_name and edge[edge_name][1] not in circuit_names) or \
+                                (edge[edge_name][1] == node_name and edge[edge_name][0] not in circuit_names):
+                            node[node_name]['edge_out'].append(edge)
     for edge in edges:
         if edge not in end_edges_order:
-            if ((edge[0] in circuit_names and edge[1] not in circuit_names + next_nodes_to_be_added_names)
-                    or (edge[1] in circuit_names and edge[0] not in circuit_names + next_nodes_to_be_added_names)):
-                end_edges_order.append(edge)
+            for edge_name in edge:
+                if ((edge[edge_name][0] in circuit_names and
+                     edge[edge_name][1] not in circuit_names + next_nodes_to_be_added_names)
+                        or (edge[edge_name][1] in circuit_names and
+                            edge[edge_name][0] not in circuit_names + next_nodes_to_be_added_names)):
+                    end_edges_order.append(edge)
     return end_edges_order, end_nodes_order
 
 
@@ -316,12 +327,13 @@ def remove_incompatible_nodes(nodes_list, nodes_list_names, edges):
         (list[node], list[node_names]): tmp
     """
     for edge in edges:
-        if edge[0] in nodes_list_names and edge[1] in nodes_list_names:
-            nodes_list_names.remove(edge[0])
-            for node in nodes_list:
-                for node_name in node:
-                    if node_name == edge[0]:
-                        nodes_list.remove(node)
+        for edge_name in edge:
+            if edge[edge_name][0] in nodes_list_names and edge[edge_name][1] in nodes_list_names:
+                nodes_list_names.remove(edge[edge_name][0])
+                for node in nodes_list:
+                    for node_name in node:
+                        if node_name == edge[edge_name][0]:
+                            nodes_list.remove(node)
     return nodes_list, nodes_list_names
 
 
@@ -343,19 +355,21 @@ def neighbours(subset, main_set, edges):
     neighbours_set_names = []
     joining_edges = []
     for edge in edges:
-        if edge[0] in subset_dictionary and edge[1] not in subset_dictionary:
-            joining_edges.append(edge)
-            if edge[1] not in neighbours_set_names:
-                neighbours_set.append({edge[1]: main_set_dictionary[edge[1]]})
-                neighbours_set_names.append(edge[1])
-        elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary:
-            joining_edges.append(edge)
-            if edge[0] not in neighbours_set_names:
-                neighbours_set.append({edge[0]: main_set_dictionary[edge[0]]})
-                neighbours_set_names.append(edge[0])
+        for edge_name in edge:
+            if edge[edge_name][0] in subset_dictionary and edge[edge_name][1] not in subset_dictionary:
+                joining_edges.append(edge)
+                if edge[edge_name][1] not in neighbours_set_names:
+                    neighbours_set.append({edge[edge_name][1]: main_set_dictionary[edge[edge_name][1]]})
+                    neighbours_set_names.append(edge[edge_name][1])
+            elif edge[edge_name][1] in subset_dictionary and edge[edge_name][0] not in subset_dictionary:
+                joining_edges.append(edge)
+                if edge[edge_name][0] not in neighbours_set_names:
+                    neighbours_set.append({edge[edge_name][0]: main_set_dictionary[edge[edge_name][0]]})
+                    neighbours_set_names.append(edge[edge_name][0])
     for edge in edges:
-        if edge[0] in neighbours_set_names and edge[1] in neighbours_set_names:
-            joining_edges.append(edge)
+        for edge_name in edge:
+            if edge[edge_name][0] in neighbours_set_names and edge[edge_name][1] in neighbours_set_names:
+                joining_edges.append(edge)
     return neighbours_set, neighbours_set_names, joining_edges
 
 

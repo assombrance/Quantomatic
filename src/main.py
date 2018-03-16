@@ -41,11 +41,11 @@ def main(diagram_file_path, inputs_order_list, outputs_order_list):
     for node in node_vertices_dictionary:
         inside_nodes.append({node: node_vertices_dictionary[node]})
     edges_list = []
-    for edge_dictionary in undir_edges_dictionary:
+    for edge_name in undir_edges_dictionary:
         edge = []
-        for node in undir_edges_dictionary[edge_dictionary]:
-            edge.append(undir_edges_dictionary[edge_dictionary][node])
-        edges_list.append(edge)
+        for node in undir_edges_dictionary[edge_name]:
+            edge.append(undir_edges_dictionary[edge_name][node])
+        edges_list.append({edge_name: edge})
     return qf.main_algo(start_nodes, end_nodes, inside_nodes, edges_list)
 
 
@@ -68,6 +68,6 @@ def debug(diagram_file_path):
 
 # debug('D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project-1.1/graphs/sample.qgraph')
 path_to_project = 'D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project_scalar_rules/graphs/'
-# print(main(path_to_project + 'test.qgraph', ['b0', 'b1'], ['b2', 'b3']))
-print(main(path_to_project + 'test2.qgraph', [], []))
-print(main(path_to_project + 'test3.qgraph', [], []))
+print(main(path_to_project + 'test.qgraph', ['b0', 'b1'], ['b2', 'b3']))
+# print(main(path_to_project + 'test2.qgraph', [], []))
+# print(main(path_to_project + 'test3.qgraph', [], []))

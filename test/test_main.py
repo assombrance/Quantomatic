@@ -104,8 +104,9 @@ def test_remove_incompatible_nodes():
     next_nodes_to_be_added = [{'v0': {'data': {'type': 'X', 'value': '3*Pi/4'}, 'annotation': {'coord': [0.5, 1.25]}}},
                               {'v2': {'data': {'type': 'X', 'value': ''}, 'annotation': {'coord': [0.5, 2.5]}}}]
     next_nodes_to_be_added_names = ['v0', 'v2']
-    edges = [['v0', 'v2'], ['v6', 'v2'], ['b1', 'v6'], ['v5', 'b2'], ['v3', 'v0'], ['v1', 'v9'], ['v1', 'b3'],
-             ['v9', 'v2'], ['v1', 'v5'], ['v3', 'v5'], ['v6', 'v0'], ['v2', 'b0']]
+    edges = [{'e0': ['v0', 'v2']}, {'e1': ['v6', 'v2']}, {'e2': ['b1', 'v6']}, {'e4': ['v5', 'b2']},
+             {'e5': ['v3', 'v0']}, {'e6': ['v1', 'v9']}, {'e7': ['v1', 'b3']}, {'e8': ['v9', 'v2']},
+             {'e5': ['v1', 'v5']}, {'e10': ['v3', 'v5']}, {'e11': ['v6', 'v0']}, {'e12': ['v2', 'b0']}]
     result = [['v0'], ['v2']]
     _, next_nodes_to_be_added_names = qf.remove_incompatible_nodes(next_nodes_to_be_added,
                                                                    next_nodes_to_be_added_names, edges)
@@ -132,8 +133,9 @@ def test_neighbours():
                     {'v0': {'annotation': {'coord': [0.5, 1.25]}, 'data': {'type': 'X', 'value': '3/4'}}}]
     end_nodes = [{'b3': {'annotation': {'boundary': True, 'coord': [2.0, -2.75]}}},
                  {'b2': {'annotation': {'boundary': True, 'coord': [0.5, -2.75]}}}]
-    edges = [['v0', 'v2'], ['v6', 'v2'], ['b1', 'v6'], ['v5', 'b2'], ['v3', 'v0'], ['v1', 'v9'], ['v1', 'b3'],
-             ['v9', 'v2'], ['v1', 'v5'], ['v3', 'v5'], ['v6', 'v0'], ['v2', 'b0']]
+    edges = [{'e0': ['v0', 'v2']}, {'e1': ['v6', 'v2']}, {'e2': ['b1', 'v6']}, {'e4': ['v5', 'b2']},
+             {'e5': ['v3', 'v0']}, {'e6': ['v1', 'v9']}, {'e7': ['v1', 'b3']}, {'e8': ['v9', 'v2']},
+             {'e5': ['v1', 'v5']}, {'e10': ['v3', 'v5']}, {'e11': ['v6', 'v0']}, {'e12': ['v2', 'b0']}]
     _, next_nodes_to_be_added_names, _ = qf.neighbours(circuit, inside_nodes + end_nodes, edges)
     result = [['v0', 'v2'],
               ['v2', 'v0']]
@@ -209,14 +211,15 @@ def test_augment_graph():
     start_nodes = [{'b0': {}}, {'b1': {}}]
     end_nodes = [{'b3': {}}, {'b2': {}}]
     inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
-    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
-             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    edges = [{'e0': ['v3', 'b3']}, {'e1': ['v1', 'b1']}, {'e2': ['v0', 'v2']}, {'e3': ['v2', 'b2']},
+             {'e4': ['b0', 'v0']}, {'e5': ['v1', 'v0']}, {'e6': ['v1', 'v2']}, {'e7': ['v3', 'v4']}]
     augmented_graph, _ = qf.augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges)
     print(augmented_graph)
     expected_augmented_graph = {'start_nodes': [],
                                 'end_nodes': [{'b2': {}}],
                                 'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
-                                'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'], ['v1', 'v0']]}
+                                'edges': [{'e3': ['v2', 'b2']}, {'e2': ['v0', 'v2']},
+                                          {'e6': ['v1', 'v2']}, {'e5': ['v1', 'v0']}]}
     assert not qf.symmetric_difference(expected_augmented_graph['start_nodes'], augmented_graph['start_nodes'])
     assert not qf.symmetric_difference(expected_augmented_graph['end_nodes'], augmented_graph['end_nodes'])
     assert not qf.symmetric_difference(expected_augmented_graph['inside_nodes'], augmented_graph['inside_nodes'])
@@ -228,14 +231,14 @@ def test_build_connected_graph():
     start_nodes = [{'b0': {}}, {'b1': {}}]
     end_nodes = [{'b3': {}}, {'b2': {}}]
     inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
-    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
-             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    edges = [{'e0': ['v3', 'b3']}, {'e1': ['v1', 'b1']}, {'e2': ['v0', 'v2']}, {'e3': ['v2', 'b2']},
+             {'e4': ['b0', 'v0']}, {'e5': ['v1', 'v0']}, {'e6': ['v1', 'v2']}, {'e7': ['v3', 'v4']}]
     connected_graph = qf.build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges)
     expected_connected_graph = {'start_nodes': [{'b0': {}}, {'b1': {}}],
                                 'end_nodes': [{'b2': {}}],
                                 'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
-                                'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],
-                                          ['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]}
+                                'edges': [{'e3': ['v2', 'b2']}, {'e2': ['v0', 'v2']}, {'e6': ['v1', 'v2']},
+                                          {'e5': ['v1', 'v0']}, {'e4': ['b0', 'v0']}, {'e1': ['v1', 'b1']}]}
     assert not qf.symmetric_difference(expected_connected_graph['start_nodes'], connected_graph['start_nodes'])
     assert not qf.symmetric_difference(expected_connected_graph['end_nodes'], connected_graph['end_nodes'])
     assert not qf.symmetric_difference(expected_connected_graph['inside_nodes'], connected_graph['inside_nodes'])
@@ -277,18 +280,18 @@ def test_split_in_connected_graphs():
     start_nodes = [{'b0': {}}, {'b1': {}}]
     end_nodes = [{'b3': {}}, {'b2': {}}]
     inside_nodes = [{'v2': {}}, {'v4': {}}, {'v1': {}}, {'v3': {}}, {'v0': {}}]
-    edges = [['v3', 'b3'], ['v1', 'b1'], ['v0', 'v2'], ['v2', 'b2'],
-             ['b0', 'v0'], ['v1', 'v0'], ['v1', 'v2'], ['v3', 'v4']]
+    edges = [{'e0': ['v3', 'b3']}, {'e1': ['v1', 'b1']}, {'e2': ['v0', 'v2']}, {'e3': ['v2', 'b2']},
+             {'e4': ['b0', 'v0']}, {'e5': ['v1', 'v0']}, {'e6': ['v1', 'v2']}, {'e7': ['v3', 'v4']}]
     connected_graphs = qf.split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges)
     expected_connected_graphs = [{'start_nodes': [{'b0': {}}, {'b1': {}}],
                                   'end_nodes': [{'b2': {}}],
                                   'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
-                                  'edges': [['v2', 'b2'], ['v0', 'v2'], ['v1', 'v2'],
-                                            ['v1', 'v0'], ['b0', 'v0'], ['v1', 'b1']]},
+                                  'edges': [{'e3': ['v2', 'b2']}, {'e2': ['v0', 'v2']}, {'e6': ['v1', 'v2']},
+                                            {'e5': ['v1', 'v0']}, {'e4': ['b0', 'v0']}, {'e1': ['v1', 'b1']}]},
                                  {'start_nodes': [],
                                   'end_nodes': [{'b3': {}}],
                                   'inside_nodes': [{'v3': {}}, {'v4': {}}],
-                                  'edges': [['v3', 'v4'], ['v3', 'b3']]}]
+                                  'edges': [{'e7': ['v3', 'v4']}, {'e0': ['v3', 'b3']}]}]
     assert not qf.symmetric_difference(expected_connected_graphs[0]['start_nodes'], connected_graphs[0]['start_nodes'])
     assert not qf.symmetric_difference(expected_connected_graphs[0]['end_nodes'], connected_graphs[0]['end_nodes'])
     assert not qf.symmetric_difference(expected_connected_graphs[0]['inside_nodes'], connected_graphs[0]['inside_nodes'])
@@ -423,16 +426,16 @@ def test_remove_end_nodes_neighbours():
 
 
 def test_pre_permutation_edge_order_management():
-    start_nodes_order = [{'v6': {'annotation': {'coord': [0.5, 3.75]}, 'edge_in': [['v6', 'b1']],
-                                 'data': {'value': '1', 'type': 'Z'}, 'edge_out': [['v2', 'v6'], ['v0', 'v6']]}}]
-    edges = [['v9', 'v1'], ['v2', 'v9'], ['b0', 'v2'], ['v5', 'v1'], ['v2', 'v6'], ['b3', 'v1'],
-             ['v2', 'v0'], ['v0', 'v6'], ['v5', 'v3'], ['v6', 'b1'], ['b2', 'v5']]
+    start_nodes_order = [{'v6': {'annotation': {'coord': [0.5, 3.75]}, 'data': {'value': '1', 'type': 'Z'}}}]
+    edges = [{'e0': ['v0', 'v2']}, {'e1': ['v2', 'v6']}, {'e2': ['b1', 'v6']}, {'e4': ['v5', 'b2']},
+             {'e5': ['v3', 'v0']}, {'e6': ['v1', 'v9']}, {'e7': ['v1', 'b3']}, {'e8': ['v9', 'v2']},
+             {'e5': ['v1', 'v5']}, {'e10': ['v3', 'v5']}, {'e11': ['v0', 'v6']}, {'e12': ['b0', 'v2']}]
     circuit_names = ['b0', 'b1']
     next_nodes_to_be_added_names = ['v6']
     result = qf.pre_permutation_edge_order_management(start_nodes_order, edges,
                                                       circuit_names, next_nodes_to_be_added_names)
     print(result)
-    expected_start_edges_order = [['v2', 'v6'], ['v0', 'v6'], ['b0', 'v2']]
+    expected_start_edges_order = [{'e1': ['v2', 'v6']}, {'e11': ['v0', 'v6']}, {'e12': ['b0', 'v2']}]
     assert result == expected_start_edges_order
 
 
@@ -440,16 +443,18 @@ def test_post_permutation_edge_order_management():
     end_nodes_order = [{'v0': {'data': {'value': '3/4', 'type': 'X'}, 'annotation': {'coord': [0.5, 2.75]}}},
                        {'v9': {'data': {'value': '1/2', 'type': 'Z'}, 'annotation': {'coord': [2.5, 0.5]}}}]
     circuit_names = ['b0', 'b1', 'v2']
-    edges = [['v3', 'v5'], ['v3', 'v0'], ['v1', 'v5'], ['v5', 'b2'], ['v0', 'v2'], ['v6', 'v0'],
-             ['v6', 'v2'], ['v2', 'b0'], ['v9', 'v2'], ['b1', 'v6'], ['v1', 'b3'], ['v9', 'v1']]
+    edges = [{'e0': ['v0', 'v2']}, {'e1': ['v2', 'v6']}, {'e2': ['b1', 'v6']}, {'e4': ['v5', 'b2']},
+             {'e5': ['v3', 'v0']}, {'e6': ['v1', 'v9']}, {'e7': ['v1', 'b3']}, {'e8': ['v9', 'v2']},
+             {'e5': ['v1', 'v5']}, {'e10': ['v3', 'v5']}, {'e11': ['v0', 'v6']}, {'e12': ['b0', 'v2']}]
     next_nodes_to_be_added_names = ['v0', 'v9']
     end_edges_order, end_nodes_order = qf.post_permutation_edge_order_management(end_nodes_order, circuit_names, edges,
                                                                                  next_nodes_to_be_added_names)
-    expected_end_edges_order = [['v0', 'v2'], ['v9', 'v2'], ['v6', 'v2'], ['b1', 'v6']]
-    expected_end_nodes_order = [{'v0': {'edge_out': [['v3', 'v0'], ['v6', 'v0']], 'data': {'value': '3/4', 'type': 'X'},
-                                        'annotation': {'coord': [0.5, 2.75]}, 'edge_in': [['v0', 'v2']]}},
-                                {'v9': {'edge_out': [['v9', 'v1']], 'data': {'value': '1/2', 'type': 'Z'},
-                                        'annotation': {'coord': [2.5, 0.5]}, 'edge_in': [['v9', 'v2']]}}]
+    expected_end_edges_order = [{'e0': ['v0', 'v2']}, {'e8': ['v9', 'v2']}, {'e1': ['v2', 'v6']}, {'e2': ['b1', 'v6']}]
+    expected_end_nodes_order = [{'v0': {'edge_out': [{'e5': ['v3', 'v0']}, {'e11': ['v0', 'v6']}],
+                                        'data': {'value': '3/4', 'type': 'X'},
+                                        'annotation': {'coord': [0.5, 2.75]}, 'edge_in': [{'e0': ['v0', 'v2']}]}},
+                                {'v9': {'edge_out': [{'e6': ['v1', 'v9']}], 'data': {'value': '1/2', 'type': 'Z'},
+                                        'annotation': {'coord': [2.5, 0.5]}, 'edge_in': [{'e8': ['v9', 'v2']}]}}]
     assert end_edges_order == expected_end_edges_order
     assert end_nodes_order == expected_end_nodes_order
 
@@ -482,7 +487,30 @@ def test_connected_graph_matrix():
     inside_nodes = [{'v0': {'data': {'type': 'X', 'value': ''}, 'annotation': {'coord': [-7.5, 2.5]}}},
                     {'v1': {'data': {'type': 'X', 'value': ''}, 'annotation': {'coord': [-2.0, 2.75]}}},
                     {'v2': {'annotation': {'coord': [-5.5, -0.5]}}}]
-    edges = [['v0', 'b0'], ['v0', 'v1'], ['v2', 'v0'], ['v2', 'v1'], ['b1', 'v1'], ['b2', 'v2']]
+    edges = [{'e0': ['v0', 'b0']}, {'e1': ['v0', 'v1']}, {'e2': ['v2', 'v0']},
+             {'e3': ['v2', 'v1']}, {'e4': ['b1', 'v1']}, {'e5': ['b2', 'v2']}]
     matrix = qf.connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges)
-    expected_matrix = [[5.00000000e-01+0.j, 3.25176795e-17+0.j, 3.25176795e-17+0.j, 5.00000000e-01+0.j],
-                       [5.00000000e-01+0.j, 3.25176795e-17+0.j, 3.25176795e-17+0.j, 5.00000000e-01+0.j]]
+    expected_matrix = np.matrix([[0.5, 0, 0, 0.5],
+                                 [0.5, 0, 0, 0.5]])
+    assert np.linalg.norm(matrix - expected_matrix) < 10**(-10)
+
+
+def test_main_algo():
+    start_nodes = [{'b0': {'annotation': {'coord': [-6.5, 3.75], 'boundary': True}}},
+                   {'b1': {'annotation': {'coord': [-4.25, 3.75], 'boundary': True}}}]
+    end_nodes = [{'b2': {'annotation': {'coord': [-5.25, -5.0], 'boundary': True}}},
+                 {'b3': {'annotation': {'coord': [-0.5, -5.0], 'boundary': True}}}]
+    inside_nodes = [{'v1': {'data': {'value': '', 'type': 'X'}, 'annotation': {'coord': [-2.0, 2.75]}}},
+                    {'v3': {'data': {'value': '', 'type': 'X'}, 'annotation': {'coord': [-0.25, 0.5]}}},
+                    {'v2': {'annotation': {'coord': [-5.5, -0.5]}}},
+                    {'v4': {'data': {'value': '', 'type': 'X'}, 'annotation': {'coord': [1.25, 0.0]}}},
+                    {'v0': {'data': {'value': '', 'type': 'X'}, 'annotation': {'coord': [-7.5, 2.5]}}},
+                    {'v5': {'data': {'value': '', 'type': 'X'}, 'annotation': {'coord': [2.75, 1.5]}}}]
+    edges = [{'e5': ['b2', 'v2']}, {'e8': ['v0', 'v1']}, {'e1': ['v0', 'b0']}, {'e10': ['b3', 'v3']},
+             {'e9': ['v4', 'v3']}, {'e7': ['v2', 'v1']}, {'e4': ['v2', 'v0']}, {'e6': ['b1', 'v1']}]
+    matrix = qf.main_algo(start_nodes, end_nodes, inside_nodes, edges)
+    expected_matrix = np.matrix([[1, 0, 0, 1],
+                                 [0, 0, 0, 0],
+                                 [1, 0, 0, 1],
+                                 [0, 0, 0, 0]]) * math.sqrt(2)
+    assert np.linalg.norm(matrix - expected_matrix) < 10**(-10)
