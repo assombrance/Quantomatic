@@ -1,4 +1,5 @@
 {
   "test_main.py::test_answer": true,
+  "test_main.py::test_bug": true,
   "test_main.py::test_sort_nodes": true
 }

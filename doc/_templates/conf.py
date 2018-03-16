@@ -169,7 +169,9 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 
-# -- Options for todo extension ----------------------------------------------
+# -- Options for to-do extension ----------------------------------------------
 
-# If true, `todo` and `todoList` produce output, else they produce nothing.
+# If true, `to-do` and `todoList` produce output, else they produce nothing.
+# (read the 'to-do' without the '-', I added it so it doesn't pop up in the
+# to-do list in my IDE)
 todo_include_todos = True

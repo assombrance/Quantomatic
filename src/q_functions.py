@@ -43,8 +43,10 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
                                                                                          next_nodes_to_be_added_names,
                                                                                          edges)
         post_permutation_nodes_order = sort_nodes(next_nodes_to_be_added)
-        post_permutation_edges_order, post_permutation_nodes_order = post_permutation_edge_order_management(
-            post_permutation_nodes_order, circuit_names, edges, next_nodes_to_be_added_names)
+        post_permutation_edges_order, \
+            post_permutation_nodes_order = post_permutation_edge_order_management(post_permutation_nodes_order,
+                                                                                  circuit_names, edges,
+                                                                                  next_nodes_to_be_added_names)
         m = permutation_matrix(pre_permutation_edges_order, post_permutation_edges_order)
         if matrix is None:
             matrix = np.matrix(m, dtype=complex)
@@ -94,12 +96,43 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
             matrix_list.append(np.matrix(connected_graph_matrix(graph['end_nodes'], [],
                                                                 graph['inside_nodes'], graph['edges'])).transpose())
         else:
-            print('find something to do here')
-    print(matrix_list)
+            matrix_list.append(scalar_matrix(graph['inside_nodes'], graph['edges']))
     result = [[1]]
-    for matrix in matrix_list:  # TODO attention à l'ordre des entrées et sorties ici !
+    for matrix in matrix_list:
         result = tensor_product(result, matrix)
+    # I/O order management
+    inputs_list_connected_graphs = []
+    outputs_list_connected_graphs = []
+    for graph in connected_graphs:
+        for node in graph['start_nodes']:
+            for node_name in node:
+                inputs_list_connected_graphs.append(node_name)
+        for node in graph['end_nodes']:
+            for node_name in node:
+                outputs_list_connected_graphs.append(node_name)
+    inputs_list_original_order = []
+    outputs_list_original_order = []
+    for node in start_nodes:
+        for node_name in node:
+            inputs_list_original_order.append(node_name)
+    for node in end_nodes:
+        for node_name in node:
+            outputs_list_original_order.append(node_name)
+    inputs_permutation_matrix = permutation_matrix(inputs_list_original_order, inputs_list_connected_graphs)
+    outputs_permutation_matrix = permutation_matrix(outputs_list_connected_graphs, outputs_list_original_order)
+    result = np.dot(outputs_permutation_matrix, result)
+    result = np.dot(result, inputs_permutation_matrix)
     return result
+
+
+def scalar_matrix(inside_nodes, edges):
+    root = inside_nodes[0]
+    for root_name in root:
+        if 'data' not in root[root_name] or root[root_name]['data']['type'] == 'Z':
+            fake_entry = [[1], [1]]
+        else:
+            fake_entry = np.matrix([[1], [0]]) * math.sqrt(2)
+        return np.dot(connected_graph_matrix([{'co': {}}], [], inside_nodes, edges + [['co', root_name]]), fake_entry)
 
 
 def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
@@ -240,7 +273,7 @@ def pre_permutation_edge_order_management(start_nodes_order, edges, circuit_name
 
 
 def post_permutation_edge_order_management(end_nodes_order, circuit_names, edges, next_nodes_to_be_added_names):
-    """Adds the data for each node of the ins and outs for each one.
+    """Adds incoming and outgoing edged to each node.
     Creates also the *end_edges_order* with the edges reaching the neighbours nodes first, and then the edges reaching
     future nodes.
 
@@ -310,14 +343,16 @@ def neighbours(subset, main_set, edges):
     neighbours_set_names = []
     joining_edges = []
     for edge in edges:
-        if edge[0] in subset_dictionary and edge[1] not in subset_dictionary and edge[1] not in neighbours_set_names:
-            neighbours_set.append({edge[1]: main_set_dictionary[edge[1]]})
-            neighbours_set_names.append(edge[1])
+        if edge[0] in subset_dictionary and edge[1] not in subset_dictionary:
             joining_edges.append(edge)
-        elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary and edge[0] not in neighbours_set_names:
-            neighbours_set.append({edge[0]: main_set_dictionary[edge[0]]})
-            neighbours_set_names.append(edge[0])
+            if edge[1] not in neighbours_set_names:
+                neighbours_set.append({edge[1]: main_set_dictionary[edge[1]]})
+                neighbours_set_names.append(edge[1])
+        elif edge[1] in subset_dictionary and edge[0] not in subset_dictionary:
             joining_edges.append(edge)
+            if edge[0] not in neighbours_set_names:
+                neighbours_set.append({edge[0]: main_set_dictionary[edge[0]]})
+                neighbours_set_names.append(edge[0])
     for edge in edges:
         if edge[0] in neighbours_set_names and edge[1] in neighbours_set_names:
             joining_edges.append(edge)
@@ -470,7 +505,7 @@ def nodes_matrix(nodes):
     return matrix_list
 
 
-def nodes_dictionary_to_nodes_list(nodes_dictionary):  # maybe sort it ?
+def nodes_dictionary_to_nodes_list(nodes_dictionary):
     """Converts a dictionary of nodes into a list of nodes
 
     A node format is as follows : **{node_name: data}**
@@ -534,28 +569,3 @@ def digit(k, i):
         int: The digit i from the integer k (0 or 1)
     """
     return int(np.floor(k / pow(2, i)) - 2 * np.floor(k / pow(2, i + 1)))
-
-
-def two_wires_permutation_matrix(i, j, n):
-    """Computes the permutation matrix between two wires
-
-    The wires' indexes are counted from last to first
-
-    Args:
-        i (int): First wire
-        j (int): Second wire
-        n (int): Total number of qbits
-    Return:
-        matrix[int]: the permutation matrix resulting from this swap
-    """
-    matrix_func = np.identity(pow(2, n))
-    for k in np.arange(pow(2, n) - 1):
-        digit_i = digit(k, i)
-        digit_j = digit(k, j)
-        if digit_i < digit_j:
-            k2 = digit_exchange(k, i, j)
-            matrix_func[k][k] = 0.
-            matrix_func[k2][k2] = 0.
-            matrix_func[k][k2] = 1.
-            matrix_func[k2][k] = 1.
-    return matrix_func
