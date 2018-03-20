@@ -1,18 +1,22 @@
 import cmath
 import math
+import collections
 import numpy as np
 
 
 def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
-    """Takes as input a ZX-calculus diagram and returns the corresponding matrix.
+    """Takes as input a ZX-calculus connected diagram and returns the corresponding matrix.
 
     This is the naive algorithm version: it isn't optimised whatsoever, so expect terrible performances.
-    The algorithm runs ass follow : it's initialised with the starting nodes, and as long as all the end-nodes
-    aren't in the set of calculated nodes, it adds as many neighbours as possible to the set and multiply their
+    The algorithm runs ass follow :
+    It has a set of nodes strictly growing with the time, this set has a corresponding matrix.
+    This set is initialised with the *start_nodes*, and as long as all the nodes aren't in the set of calculated nodes,
+    it adds as many neighbours as possible to the set and multiply their
     matrices to the set's matrix.
+    This way of going through the diagram requires the diagram to have a non empty set of *start_nodes*
 
     Args:
-        start_nodes (list[node]): Inputs for this configuration of the diagram
+        start_nodes (list[node]): Inputs for this configuration of the diagram (non empty !)
         end_nodes (list[node]): Outputs for this configuration of the diagram
         inside_nodes (list[node]): Transformation in the diagram
         edges (list[[node_name1, node_name2]]): List of the edges between each nodes
@@ -88,6 +92,24 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
 
 
 def main_algo(start_nodes, end_nodes, inside_nodes, edges):
+    """Takes as input a ZX-calculus diagram and returns the corresponding matrix.
+
+    To compute the matrix corresponding to a diagram, this algorithm splits it into connected graphs, and feeds
+    them to the **connected_graph_matrix** function.
+    If a graph doesn't have any input, the outputs are given as inputs and the resulting matrix is transposed.
+    If a graph has neither no inputs and no outputs, it is given to **scalar_matrix** before
+    **connected_graph_matrix** for an operation allowing it to work (described in **scalar_matrix**).
+    Once done, all the result matrices are multiplied with the **tensor_product** function.
+
+    Args:
+        start_nodes (list[node]): Inputs for this configuration of the diagram
+        end_nodes (list[node]): Outputs for this configuration of the diagram
+        inside_nodes (list[node]): Transformation in the diagram
+        edges (list[[node_name1, node_name2]]): List of the edges between each nodes
+
+    Returns:
+        matrix[complex]: Matrix representing the diagram
+    """
     connected_graphs = split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges)
     matrix_list = []
     for graph in connected_graphs:
@@ -128,6 +150,21 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
 
 
 def scalar_matrix(inside_nodes, edges):
+    """Computes the matrix corresponding to a 'scalar' diagram (a diagram without any inputs nor outputs)
+
+    This function is necessary because the **connected_graph_matrix** function needs inputs to start, to circumvent this
+    problem, it adds a fake input on a random node (using the spider rule).
+    If the node is green, the result matrix will be multiplied by [[1] [1]], otherwise, it will be multiplied by
+    [[sqrt(2)] [0]]
+    (those matrices are the one corresponding respectively to a green node with one output or a red node
+    with one output).
+
+    Args:
+        inside_nodes: (list[node]): Transformation in the diagram
+        edges: (list[[node_name1, node_name2]]): List of the edges between each nodes
+    Returns:
+         matrix:
+    """
     root = inside_nodes[0]
     for root_name in root:
         if 'data' not in root[root_name] or root[root_name]['data']['type'] == 'Z':
@@ -139,6 +176,21 @@ def scalar_matrix(inside_nodes, edges):
 
 
 def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
+    """Takes as input a ZX-calculus diagram and returns a list of connected graphs.
+
+    To achieve this, a random node not yet in a constructed connected graph is chosen as a root. From this point,
+    **build_connected_graph** gathers all the nodes and edges connected to this root.
+    The type graph here is a dictionary with the *start_nodes*, *end_nodes*, *inside_nodes*, *edges* gathered in it
+
+    Args:
+        start_nodes (list[node]): Inputs for this configuration of the diagram
+        end_nodes (list[node]): Outputs for this configuration of the diagram
+        inside_nodes (list[node]): Transformation in the diagram
+        edges (list[[node_name1, node_name2]]): List of the edges between each nodes
+
+    Returns:
+        list[graph]: List of connected graphs
+    """
     connected_graphs = []
     while not end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
         root = choose_root(inside_nodes, connected_graphs)
@@ -148,6 +200,23 @@ def split_in_connected_graphs(start_nodes, end_nodes, inside_nodes, edges):
 
 
 def build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges):
+    """Builds a connected graph from root.
+
+    Starts from a graph with just one *inside_node* and progressively grow up to the point it doesn't change
+    anymore.
+    The growth is managed by **augment_graph** as well as the change detection.
+
+    Args:
+        root (node): A node from the inside nodes list (not yet in a connected graph when called in the
+            **split_in_connected_graphs** function
+        start_nodes (list[node]): Inputs for this configuration of the diagram
+        end_nodes (list[node]): Outputs for this configuration of the diagram
+        inside_nodes (list[node]): Transformation in the diagram
+        edges (list[[node_name1, node_name2]]): List of the edges between each nodes
+
+    Returns:
+        list[graph]: List of connected graphs
+    """
     changed = True
     connected_graph = {'start_nodes': [], 'end_nodes': [], 'inside_nodes': [root], 'edges': []}
     while changed:
@@ -156,6 +225,21 @@ def build_connected_graph(root, start_nodes, end_nodes, inside_nodes, edges):
 
 
 def augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges):
+    """Augments a graph with all its neighbours and edges connecting these neighbours to the graph and between them.
+    Also returns if any modification has been made.
+
+    Args:
+        connected_graph (graph): To be exact, this graph doesn't have to be connected, but it is the use case we are
+            exploiting so we can expect that.
+        start_nodes (list[node]): Inputs for this configuration of the diagram
+        end_nodes (list[node]): Outputs for this configuration of the diagram
+        inside_nodes (list[node]): Transformation in the diagram
+        edges (list[[node_name1, node_name2]]): List of the edges between each nodes
+
+    Returns:
+        graph, bool: *connected_graph* augmented with it's neighbours and the correct edges ass well as a boolean
+            informing if a change as been applied to *connected_graph* or not.
+    """
     node_set = start_nodes + end_nodes + inside_nodes
     initial_node_set = connected_graph['start_nodes'] + connected_graph['end_nodes'] + connected_graph['inside_nodes']
     nodes_neighbours, _, connection_edges = neighbours(initial_node_set, node_set, edges)
@@ -182,19 +266,50 @@ def augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges):
 
 
 def choose_root(inside_nodes, connected_graphs):
+    """Returns a node from *inside_nodes* which is not in any graph from *connected_graphs*. Returns *None* if this set
+    is empty.
+
+    Args:
+        inside_nodes (list[node]):
+        connected_graphs (list[graph]):
+    Returns:
+        node:
+    """
     remaining_nodes = list(inside_nodes)
     for connected_graph in connected_graphs:
         for node in connected_graph['inside_nodes']:
             if node in remaining_nodes:
                 del remaining_nodes[remaining_nodes.index(node)]
-    return remaining_nodes[0]
+    return remaining_nodes[0] if len(remaining_nodes) else None
 
 
-def symmetric_difference(x, y):
+def symmetric_difference(x: collections.Iterable, y: collections.Iterable):
+    """Symmetric difference between two iterables
+
+    Args:
+        x (iterable): first iterable
+        y (iterable): second iterable
+
+    Returns:
+        iterable: symmetric difference between *x* and *y*
+    """
     return [i for i in x if i not in y] + [i for i in y if i not in x]
 
 
 def end_detection_connected_graphs(connected_graphs, start_nodes, end_nodes, inside_nodes):
+    """Detects if all the nodes are in the built *connected_graphs*.
+
+    Needed for the *connected_graphs* construction.
+
+    Args:
+        connected_graphs (list[graph]): List of connected graphs
+        start_nodes (list[node]): Global list of start nodes
+        end_nodes(list[node]): Global list of end nodes
+        inside_nodes(list[node]): Global list of inside nodes
+
+    Returns:
+        bool: True if the end is reached, meaning if no node from the global lists are left from the *connected_graphs*.
+    """
     current_start_nodes = []
     current_end_nodes = []
     current_inside_nodes = []
@@ -211,10 +326,10 @@ def end_detection_main_algo(circuit_names, inside_nodes):
     """Detects if all the end nodes are in the circuit. If so, end is reached, returns True. Else, returns false
 
     Args:
-        circuit_names:
-        inside_nodes:
+        circuit_names (list[string]): List of all nodes' name in the circuit
+        inside_nodes (list[node]): List of the inside nodes in the graph
     Returns:
-         bool: End reached
+         bool: Main loop end reached
     """
     for node in inside_nodes:
         for node_name in node:
@@ -252,6 +367,19 @@ def sort_nodes(nodes_list):
 
 
 def remove_end_nodes_neighbours(next_nodes_to_be_added, next_nodes_to_be_added_names, end_nodes_names):
+    """Removes the end nodes from the *next_nodes_to_be_added*.
+
+    This function is needed just before the node matrix calculations. Removing those nodes from the list is the
+    equivalent of delaying them to the next layer. It is needed because the end nodes don't have a corresponding matrix.
+
+    Args:
+        next_nodes_to_be_added (list[node]): List of node next added to the circuit.
+        next_nodes_to_be_added_names (list[string]): List of names corresponding to the above list.
+        end_nodes_names (list[string]): List of nodes' name to remove from the above list.
+
+    Returns:
+        list[node], list[string]: Lists cleared from the end nodes.
+    """
     for node in next_nodes_to_be_added:
         for node_name in node:
             if node_name in end_nodes_names:
@@ -261,6 +389,18 @@ def remove_end_nodes_neighbours(next_nodes_to_be_added, next_nodes_to_be_added_n
 
 
 def pre_permutation_edge_order_management(start_nodes_order, edges, circuit_names, next_nodes_to_be_added_names):
+    """Returns the edges ordered by node (and more if some edges are not used)
+
+    Args:
+        start_nodes_order (list[node]): List of nodes before the permutation
+        edges (list[edge]): List of edges in the graph
+        circuit_names (list[string]): List on nodes' name in the current built circuit
+        next_nodes_to_be_added_names (list[string]): List of nodes to be added next (needed to determine the edges
+            coming out of the circuit but not used yet)
+
+    Returns:
+
+    """
     start_edges_order = []
     for node in start_nodes_order:
         for node_name in node:
@@ -284,11 +424,17 @@ def post_permutation_edge_order_management(end_nodes_order, circuit_names, edges
     Creates also the *end_edges_order* with the edges reaching the neighbours nodes first, and then the edges reaching
     future nodes.
 
-    :param end_nodes_order:
-    :param circuit_names:
-    :param edges:
-    :param next_nodes_to_be_added_names:
-    :return:
+    Args:
+        end_nodes_order (list[node]): List of nodes after the permutation, needed to order the edges properly. Moreover,
+            nodes will be tagged with incoming and outgoing edges to compute their matrix later on.
+        circuit_names (list[string]): List of nodes in the current built circuit, needed to know if an edge is incoming
+            or outgoing.
+        edges (list[edge]): List of edges in the graph
+        next_nodes_to_be_added_names (list[node]): list of nodes' name to be added next, used to add the edges joining
+            the previous layer and a layer coming later on.
+
+    Returns:
+        list[edge], list[node]: The list of edges and nodes with the appropriate values.
     """
     end_edges_order = []
     for node in end_nodes_order:
@@ -317,14 +463,16 @@ def post_permutation_edge_order_management(end_nodes_order, circuit_names, edges
 
 
 def remove_incompatible_nodes(nodes_list, nodes_list_names, edges):
-    """
+    """In the **connected_graph_matrix** function, it is impossible to compute the matrices from two nodes if they are
+    in the same layer. To avoid this problem, if there is an edge between two nodes of a layer, one of the two is
+    removed via the current function.
 
     Args:
-        nodes_list:
-        nodes_list_names:
-        edges:
+        nodes_list (list[node]): List of nodes in the next layer to be added.
+        nodes_list_names (list[string]): List of the names corresponding to the abode nodes.
+        edges (list[edge]): List of edges in the graph.
     Returns:
-        (list[node], list[node_names]): tmp
+        (list[node], list[node_names]): List of nodes cleared from incompatibilities.
     """
     for edge in edges:
         for edge_name in edge:
@@ -338,16 +486,18 @@ def remove_incompatible_nodes(nodes_list, nodes_list_names, edges):
 
 
 def neighbours(subset, main_set, edges):
-    """Returns the neighbours of *subset* in *set*.
+    """Returns the neighbours of *subset* in *set* as well as the edges joining this *subset* to the neighbours.
 
-    The format for a node must be {node_name: data}
+    The format for a node must be {node_name: data} and similarly, for an edge : {edge_name: [node1, node2]}
 
     Args:
         subset (list[node]): The subset of which we are looking for the neighbours
         main_set (list[node]): The global set containing the subset and possibly more
         edges (list[(node_name,node_name)]): The list of relations between elements of the set
     Returns:
-        (list[node], list[node_names]): A list (possibly empty) of elements in *set*, these are all the neighbours of *subset*
+        list[node], list[string], list[edge]: A list (possibly empty) of elements in *set*, these are all the
+        *neighbours* of *subset*, a list of the name of each node of the previous list and a list of the edges joining
+        the *subset* to the *neighbours* and the *neighbours* bewteen each other.
     """
     subset_dictionary = nodes_list_to_nodes_dictionary(subset)
     main_set_dictionary = nodes_list_to_nodes_dictionary(main_set)
@@ -393,6 +543,16 @@ def permutation_matrix(pre_permutation_list, post_permutation_list):
 
 
 def build_permutation_dictionary(pre_permutation_list, post_permutation_list):
+    """Builds a permutation dictionary (representing the permutation function) from two list given, the first one pre
+    permutation and the second one post permutation.
+
+    Args:
+        pre_permutation_list (list): List before permutation.
+        post_permutation_list (list): List after permutation.
+
+    Returns:
+        dictionary: Permutation function under a dictionary representation.
+    """
     length = len(pre_permutation_list)
     permutation_dic = {}
     for i in np.arange(length):
@@ -404,6 +564,17 @@ def build_permutation_dictionary(pre_permutation_list, post_permutation_list):
 
 
 def image_by_permutation(permutation_dictionary, n):
+    """Computes the image of *n* by the permutation described by *permutation_dictionary*.
+
+    *permutation_dictionary* format : {Fiber (int): Image (int)}
+
+    Args:
+        permutation_dictionary (dictionary): Dictionary representing the permutation function
+        n (int): Fiber to the image looked for.
+
+    Returns:
+        int: Image of *n* by the permutation.
+    """
     length = len(permutation_dictionary)
     image = {}
     for i in np.arange(length):
@@ -412,6 +583,16 @@ def image_by_permutation(permutation_dictionary, n):
 
 
 def binary_dictionary_to_int(binary_dictionary):
+    """Translate a binary number given under it's binary shape via the *binary_dictionary* to an int.
+
+    *binary_dictionary* format : {digit_number (int): value (bool)}
+
+    Args:
+        binary_dictionary (dictionary): an int given under it's binary representation with a dictionary
+
+    Returns:
+        int: the int value of the number
+    """
     length = len(binary_dictionary)
     result = 0
     for i in np.arange(length):
