@@ -3,13 +3,14 @@ import json
 import q_functions as qf
 
 
-def main(diagram_file_path, inputs_order_list, outputs_order_list):
+def main(diagram_file_path, inputs_order_list: list, outputs_order_list: list):
     """Computes the diagram matrix from the diagram given, the diagram inputs are precises separately (once integrated
     in Quantomatic, the inputs are asked to the user via a dialogue box)
 
     Args:
-          diagram_file_path (path): Path the de diagram data file (extension : .qgraph, format : json)
-          inputs_order_list (list[end_nodes_names]): The list on the inputs taken for this matrix. Other end nodes are outputs
+        diagram_file_path (path): Path the de diagram data file (extension : .qgraph, format : json)
+        inputs_order_list (list[string]): Ordered list of inputs taken for this matrix calculation.
+        outputs_order_list (list[string]): Ordered list of outputs taken for this matrix calculation.
     Returns:
          matrix: The matrix corresponding to the given diagram
     """
