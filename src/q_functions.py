@@ -497,7 +497,7 @@ def neighbours(subset, main_set, edges):
     Returns:
         list[node], list[string], list[edge]: A list (possibly empty) of elements in *set*, these are all the
         *neighbours* of *subset*, a list of the name of each node of the previous list and a list of the edges joining
-        the *subset* to the *neighbours* and the *neighbours* bewteen each other.
+        the *subset* to the *neighbours* and the *neighbours* between each other.
     """
     subset_dictionary = nodes_list_to_nodes_dictionary(subset)
     main_set_dictionary = nodes_list_to_nodes_dictionary(main_set)
@@ -681,14 +681,14 @@ def nodes_matrix(nodes):
                     # Z node, angle node_func[node_name_func]['data']['value']
                     alpha = node_func[node_name_func]['data']['value']
                     alpha.replace('Pi', '1')
-                    alpha = float(eval(alpha))  # TODO : do it better, possible code injection here
+                    alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                 else:
                     # X node, angle node_func[node_name_func]['data']['value']
                     alpha = node_func[node_name_func]['data']['value']
                     alpha.replace('Pi', '1')
-                    alpha = float(eval(alpha))  # TODO : do it better, possible code injection here
+                    alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
@@ -747,7 +747,7 @@ def digit_exchange(k, i, j):
         i (int): The first digit index
         j (int): The second digit index
     Returns:
-        int: The value of k once the digits are axchanged
+        int: The value of k once the digits are exchanged
     """
     return k - pow(2, i) * digit(k, i) + pow(2, i) * digit(k, j) - pow(2, j) * digit(k, j) + pow(2, j) * digit(k, i)
 
