@@ -49,9 +49,9 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
                                                                                          edges)
         post_permutation_nodes_order = sort_nodes(next_nodes_to_be_added)
         post_permutation_edges_order, \
-            post_permutation_nodes_order = post_permutation_edge_order_management(post_permutation_nodes_order,
-                                                                                  circuit_names, edges,
-                                                                                  next_nodes_to_be_added_names)
+        post_permutation_nodes_order = post_permutation_edge_order_management(post_permutation_nodes_order,
+                                                                              circuit_names, edges,
+                                                                              next_nodes_to_be_added_names)
         m = permutation_matrix(pre_permutation_edges_order, post_permutation_edges_order)
         if matrix is None:
             matrix = np.matrix(m, dtype=complex)
@@ -669,26 +669,21 @@ def nodes_matrix(nodes):
                 # Z node, angle 0
                 matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1
             else:
-                if node_func[node_name_func]['data']['value'] == '':
-                    # X node, angle 0
-                    h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
-                    matrix_func[pow(2, m) - 1][pow(2, n) - 1] = 1
-                    a = tensor_power(h, m)
-                    b = tensor_power(h, n)
-                    matrix_func = np.dot(a, matrix_func)
-                    matrix_func = np.dot(matrix_func, b)
-                elif node_func[node_name_func]['data']['type'] == 'Z':
+                if node_func[node_name_func]['data']['type'] == 'Z':
                     # Z node, angle node_func[node_name_func]['data']['value']
                     alpha = node_func[node_name_func]['data']['value']
                     alpha.replace('Pi', '1')
                     alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
-                else:
+                elif node_func[node_name_func]['data']['type'] == 'X':
                     # X node, angle node_func[node_name_func]['data']['value']
-                    alpha = node_func[node_name_func]['data']['value']
-                    alpha.replace('Pi', '1')
-                    alpha = float(eval(alpha))
+                    if node_func[node_name_func]['data']['value'] == '':
+                        alpha = 0
+                    else:
+                        alpha = node_func[node_name_func]['data']['value']
+                        alpha.replace('Pi', '1')
+                        alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
                     h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
@@ -696,6 +691,18 @@ def nodes_matrix(nodes):
                     b = tensor_power(h, n)
                     matrix_func = np.dot(a, matrix_func)
                     matrix_func = np.dot(matrix_func, b)
+                elif node_func[node_name_func]['data']['type'] == 'hadamard':
+                    # Hadamard
+                    if n == 1 and m == 1:
+                        matrix_func = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
+                    elif n == 2 and m == 0:
+                        matrix_func = np.matrix([[1, 1, 1, -1]]) / np.sqrt(2)
+                    else:
+                        raise NameError('Unhandled Hadamard configuration : (' + str(n) + ',' + str(m) + ') instead of '
+                                                                                                         '(1,1) or '
+                                                                                                         '(2,0)')
+                else:
+                    raise NameError('Unknown node type : ' + node_func[node_name_func]['data']['type'])
             matrix_list.append(matrix_func)
     return matrix_list
 
