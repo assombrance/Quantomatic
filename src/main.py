@@ -1,4 +1,7 @@
 import json
+import numpy as np
+
+import sys
 
 import q_functions as qf
 
@@ -34,10 +37,16 @@ def main(diagram_file_path, inputs_order_list: list, outputs_order_list: list):
             raise NameError('Not all wire edges in Inputs + Outputs')
     start_nodes = []
     for node_name in inputs_order_list:
-        start_nodes.append({node_name: wire_vertices_dictionary[node_name]})
+        if node_name not in wire_vertices_dictionary:
+            raise NameError('Boundary \'' + node_name + '\' not in wire_vertices dictionary')
+        else:
+            start_nodes.append({node_name: wire_vertices_dictionary[node_name]})
     end_nodes = []
     for node_name in outputs_order_list:
-        end_nodes.append({node_name: wire_vertices_dictionary[node_name]})
+        if node_name not in wire_vertices_dictionary:
+            raise NameError('Boundary \'' + node_name + '\' not in wire_vertices dictionary')
+        else:
+            end_nodes.append({node_name: wire_vertices_dictionary[node_name]})
     inside_nodes = []
     for node in node_vertices_dictionary:
         inside_nodes.append({node: node_vertices_dictionary[node]})
@@ -67,8 +76,12 @@ def debug(diagram_file_path):
             print('    ', entry2, ': ', diagram_dictionary[entry][entry2])
 
 
-# debug('D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project-1.1/graphs/sample.qgraph')
-path_to_project = 'D:/Users/Henri/Documents/Esisar/5A/PFE/Info quantique/Quantomatic/zx-project_scalar_rules/graphs/'
-print(main(path_to_project + 'test.qgraph', ['b0', 'b1'], ['b2', 'b3']))
-# print(main(path_to_project + 'test2.qgraph', [], []))
-# print(main(path_to_project + 'test3.qgraph', [], []))
+inputList = list(map(str, sys.argv[2].strip('[]').split(',')))
+inputList.remove('')
+
+outputList = list(map(str, sys.argv[3].strip('[]').split(',')))
+outputList.remove('')
+
+np.set_printoptions(suppress=True)
+np.set_printoptions(precision=3)
+print(main(sys.argv[1], inputList, outputList))
