@@ -29,7 +29,7 @@ And on Windows:
 // For Windows
 val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
 ```
-For now, only path without space are supported on Windows
+For now, only path without any space are supported on Windows
 
 ### Run from source
 In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 134, make sure that the run option is enabled:
