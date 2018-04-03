@@ -15,7 +15,7 @@ To compile Quantomatic, you need:
 - sbt
 
 To compile on Windows or Linux, make sure that the right line is enabled in `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`
-On Linux, you must have, on line 144:
+On Linux, you must have, on line 152:
 ```scala
 // For Linux
 val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
@@ -32,7 +32,7 @@ val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" 
 For now, only path without any space are supported on Windows
 
 ### Run from source
-In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 134, make sure that the run option is enabled:
+In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 140, make sure that the run option is enabled:
 ```scala
 // For assembly
 // val mainPath = "src/main.py"
@@ -45,7 +45,7 @@ $ sbt run
 ~~~~
 
 ### Compile
-In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 134, make sure that the assembly option is enabled:
+In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 140, make sure that the assembly option is enabled:
 ```scala
 // For assembly
 val mainPath = "src/main.py"
