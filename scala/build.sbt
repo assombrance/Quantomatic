@@ -32,7 +32,7 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 
 //exportJars := true
 
-seq(appbundle.settings: _*)
+Seq(appbundle.settings: _*)
 
 appbundle.mainClass := Some("quanto.gui.QuantoDerive")
 

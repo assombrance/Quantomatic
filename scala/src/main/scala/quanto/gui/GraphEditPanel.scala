@@ -131,8 +131,8 @@ class GraphEditControls(theory: Theory) extends Publisher {
               case None    => doc.document.showSaveAsDialog(QuantoDerive.CurrentProject.map(_.rootFolder))
             }
             val graphPath = doc.document.file.get.getAbsolutePath
-//            val mainPath = "src/main.py" // for assembly
-            val mainPath = "../src/main.py" // for run
+            val mainPath = "src/main.py" // for assembly
+//            val mainPath = "../src/main.py" // for run
             val inputs = new JTextField
             val outputs = new JTextField
             val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
@@ -141,7 +141,10 @@ class GraphEditControls(theory: Theory) extends Publisher {
             if (option == Dialog.Result.Ok) {
               val inputList = inputs.getText()
               val outputList = outputs.getText()
-              val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+              // For Linux
+//              val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+              // For Windows
+              val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
               var result = ""
               var error = ""
               val logger = ProcessLogger(
@@ -160,7 +163,18 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     result = error
                   }
               }
-              Dialog.showMessage(title = "Graph Matrix Result", message = result)
+              if (errorOccurred) {
+                Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
+              } else {
+                val resultArray = result.split("_______________")
+                if (resultArray.length == 1){
+                  Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
+                } else {
+                  val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
+                  Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                }
+
+              }
             }
             setMouseState(SelectTool())
           case _ =>

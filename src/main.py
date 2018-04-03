@@ -104,4 +104,5 @@ if assumed_order_e:
     print('Caution, not all wires given explicitly as input or output, assuming following order:')
     print('Inputs: ' + str(inputList))
     print('Outputs: ' + str(outputList))
+print('_______________')
 print(matrix)
