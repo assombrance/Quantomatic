@@ -49,9 +49,9 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
                                                                                          edges)
         post_permutation_nodes_order = sort_nodes(next_nodes_to_be_added)
         post_permutation_edges_order, \
-        post_permutation_nodes_order = post_permutation_edge_order_management(post_permutation_nodes_order,
-                                                                              circuit_names, edges,
-                                                                              next_nodes_to_be_added_names)
+            post_permutation_nodes_order = post_permutation_edge_order_management(post_permutation_nodes_order,
+                                                                                  circuit_names, edges,
+                                                                                  next_nodes_to_be_added_names)
         m = permutation_matrix(pre_permutation_edges_order, post_permutation_edges_order)
         if matrix is None:
             matrix = np.matrix(m, dtype=complex)
@@ -59,10 +59,13 @@ def connected_graph_matrix(start_nodes, end_nodes, inside_nodes, edges):
             matrix = np.dot(m, matrix)
         m = np.full((1, 1), 1, dtype=complex)
         computational_nodes = list(post_permutation_nodes_order)
+        to_remove = []
         for node in computational_nodes:
             for node_name in node:
                 if node_name in end_nodes_names:
-                    del computational_nodes[computational_nodes.index(node)]
+                    to_remove.append(node)
+        for node in to_remove:
+            computational_nodes.remove(node)
         nodes_matrices = nodes_matrix(computational_nodes)
         for node_matrix in nodes_matrices:
             m = tensor_product(m, node_matrix)
@@ -147,6 +150,41 @@ def main_algo(start_nodes, end_nodes, inside_nodes, edges):
     result = np.dot(outputs_permutation_matrix, result)
     result = np.dot(result, inputs_permutation_matrix)
     return result
+
+
+def manage_ins_outs(wire_vertices_dictionary, undir_edges_dictionary, inputs_order_list: list,
+                    outputs_order_list: list):
+    """Looks for unlisted inputs and outputs, in case some are found, if listed as input or output in the file, add them
+    otherwise, raise an error.
+
+    Args:
+        wire_vertices_dictionary (dictionary): raw input/output dictionary
+        undir_edges_dictionary (dictionary): raw edges dictionary
+        inputs_order_list (list[string]): user input list
+        outputs_order_list (list[string]): user output list
+
+    Returns:
+        bool, list, list
+    """
+    assumed_order = False
+    for node_name in wire_vertices_dictionary:
+        if node_name not in inputs_order_list + outputs_order_list:
+            for edge_name in undir_edges_dictionary:
+                if undir_edges_dictionary[edge_name]['tgt'] == node_name or \
+                        undir_edges_dictionary[edge_name]['src'] == node_name:
+                    if 'data' in undir_edges_dictionary[edge_name] and \
+                            'label' in undir_edges_dictionary[edge_name]['data']:
+                        if undir_edges_dictionary[edge_name]['data']['label'] == 'input':
+                            inputs_order_list.append(node_name)
+                            assumed_order = True
+                        elif undir_edges_dictionary[edge_name]['data']['label'] == 'output':
+                            outputs_order_list.append(node_name)
+                            assumed_order = True
+                        else:
+                            raise NameError('Not all wire edges in Inputs + Outputs (missing \'' + node_name + '\')')
+                    else:
+                        raise NameError('Not all wire edges in Inputs + Outputs (missing \'' + node_name + '\')')
+    return assumed_order, inputs_order_list, outputs_order_list
 
 
 def scalar_matrix(inside_nodes, edges):

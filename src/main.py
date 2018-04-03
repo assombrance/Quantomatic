@@ -32,9 +32,10 @@ def main(diagram_file_path, inputs_order_list: list, outputs_order_list: list):
         undir_edges_dictionary = diagram_dictionary['undir_edges']
     else:
         undir_edges_dictionary = []
-    for node_name in wire_vertices_dictionary:
-        if node_name not in inputs_order_list + outputs_order_list:
-            raise NameError('Not all wire edges in Inputs + Outputs')
+    assumed_order, inputs_order_list, outputs_order_list = qf.manage_ins_outs(wire_vertices_dictionary,
+                                                                              undir_edges_dictionary,
+                                                                              inputs_order_list,
+                                                                              outputs_order_list)
     start_nodes = []
     for node_name in inputs_order_list:
         if node_name not in wire_vertices_dictionary:
@@ -52,11 +53,11 @@ def main(diagram_file_path, inputs_order_list: list, outputs_order_list: list):
         inside_nodes.append({node: node_vertices_dictionary[node]})
     edges_list = []
     for edge_name in undir_edges_dictionary:
-        edge = []
-        for node in undir_edges_dictionary[edge_name]:
-            edge.append(undir_edges_dictionary[edge_name][node])
+        # noinspection PyTypeChecker
+        edge = [undir_edges_dictionary[edge_name]['src'], undir_edges_dictionary[edge_name]['tgt']]
         edges_list.append({edge_name: edge})
-    return qf.main_algo(start_nodes, end_nodes, inside_nodes, edges_list)
+    return assumed_order, inputs_order_list, outputs_order_list, qf.main_algo(start_nodes, end_nodes,
+                                                                              inside_nodes, edges_list)
 
 
 def debug(diagram_file_path):
@@ -77,11 +78,30 @@ def debug(diagram_file_path):
 
 
 inputList = list(map(str, sys.argv[2].strip('[]').split(',')))
-inputList.remove('')
+if '' in inputList:
+    inputList.remove('')
 
 outputList = list(map(str, sys.argv[3].strip('[]').split(',')))
-outputList.remove('')
+if '' in outputList:
+    outputList.remove('')
+
+in_out = inputList + outputList
+difference = qf.symmetric_difference(inputList, outputList)
+double = qf.symmetric_difference(in_out, difference)
+double_simplified = []
+i = 0
+for wire in double:
+    i = i + 1
+    if i % 2:
+        double_simplified.append(wire)
+if double_simplified:
+    raise NameError('Common node in Inputs and Outputs : ' + str(double_simplified))
 
 np.set_printoptions(suppress=True)
 np.set_printoptions(precision=3)
-print(main(sys.argv[1], inputList, outputList))
+assumed_order_e, inputList, outputList, matrix = main(sys.argv[1], inputList, outputList)
+if assumed_order_e:
+    print('Caution, not all wires given explicitly as input or output, assuming following order:')
+    print('Inputs: ' + str(inputList))
+    print('Outputs: ' + str(outputList))
+print(matrix)

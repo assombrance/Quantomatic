@@ -8,7 +8,6 @@ import swing._
 import swing.event._
 import javax.swing.ImageIcon
 import quanto.util.swing.ToolBar
-import javax.swing.JPasswordField
 import javax.swing.JTextField
 
 case class MouseStateChanged(m : MouseState) extends Event
@@ -132,8 +131,8 @@ class GraphEditControls(theory: Theory) extends Publisher {
               case None    => doc.document.showSaveAsDialog(QuantoDerive.CurrentProject.map(_.rootFolder))
             }
             val graphPath = doc.document.file.get.getAbsolutePath
-            val mainPath = "src/main.py" // for assembly
-//            val mainPath = "../src/main.py" // for run
+//            val mainPath = "src/main.py" // for assembly
+            val mainPath = "../src/main.py" // for run
             val inputs = new JTextField
             val outputs = new JTextField
             val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
@@ -148,10 +147,12 @@ class GraphEditControls(theory: Theory) extends Publisher {
               val logger = ProcessLogger(
                 (o: String) => println(o),
                 (e: String) => error += e)
+              var errorOccurred = false
               try {
                 result = Process(command).!!(logger)
               } catch {
                 case e : Exception =>
+                  errorOccurred = true
                   val errors = error.split("NameError: ")
                   if (errors.length > 1) {
                     result = "Error : " + error.split("NameError: ")(1)
