@@ -14,6 +14,8 @@ To compile Quantomatic, you need:
 - JDK version 7 or newer
 - sbt
 
+An issue with sbt caused the impossibility to compile on windows. It needs further testing but for now, linux works just fine.
+
 ### Run from source
 with sbt installed
 ~~~~
