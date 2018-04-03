@@ -44,7 +44,7 @@ $ cd [project directory]/scala
 $ sbt run
 ~~~~
 
-### To compile Quantomatic
+### Compile
 In `[project directory]/scala/src/main/scala/quanto/gui/GraphEditPanel.scala`, line 134, make sure that the assembly option is enabled:
 ```scala
 // For assembly
