@@ -1,14 +1,14 @@
 package quanto.gui
 
-import graphview.GraphView
-import quanto.data._
+import javax.swing.{ImageIcon, JTextField}
 
-import sys.process._
-import swing._
-import swing.event._
-import javax.swing.ImageIcon
+import quanto.data._
+import quanto.gui.graphview.GraphView
 import quanto.util.swing.ToolBar
-import javax.swing.JTextField
+
+import scala.swing._
+import scala.swing.event._
+import scala.sys.process.{Process, ProcessLogger}
 
 case class MouseStateChanged(m : MouseState) extends Event
 
@@ -130,53 +130,61 @@ class GraphEditControls(theory: Theory) extends Publisher {
               case Some(_) =>
               case None    => doc.document.showSaveAsDialog(QuantoDerive.CurrentProject.map(_.rootFolder))
             }
-            val graphPath = doc.document.file.get.getAbsolutePath
-            val mainPath = "src/main.py" // for assembly
-//            val mainPath = "../src/main.py" // for run
-            val inputs = new JTextField
-            val outputs = new JTextField
-            val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
-            val option = Dialog.showConfirmation(message = message, title = "Graph Matrix Dialogue",
-                                                                optionType = Dialog.Options.OkCancel)
-            if (option == Dialog.Result.Ok) {
-              val inputList = inputs.getText()
-              val outputList = outputs.getText()
-              // For Linux
-//              val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
-              // For Windows
-              val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
-              var result = ""
-              var error = ""
-              val logger = ProcessLogger(
-                (o: String) => println(o),
-                (e: String) => error += e)
-              var errorOccurred = false
-              try {
-                result = Process(command).!!(logger)
-              } catch {
-                case e : Exception =>
-                  errorOccurred = true
-                  val errors = error.split("NameError: ")
-                  if (errors.length > 1) {
-                    result = "Error : " + error.split("NameError: ")(1)
-                  } else {
-                    result = error
-                  }
-              }
-              if (errorOccurred) {
-                Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
-              } else {
-                val resultArray = result.split("_______________")
-                if (resultArray.length == 1){
-                  Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
-                } else {
-                  val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
-                  Dialog.showMessage(title = "Graph Matrix Result", message = content)
+            if (doc.document.unsavedChanges) {
+              Dialog.showMessage(title = "Unsaved Changes",
+                message = "You need to save the document before",
+                messageType = Dialog.Message.Info
+              )
+            } else {
+              val graphPath = doc.document.file.get.getAbsolutePath
+              // For assembly
+              val mainPath = "src/main.py"
+              // For run
+              // val mainPath = "../src/main.py"
+              val inputs = new JTextField
+              val outputs = new JTextField
+              val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
+              val option = Dialog.showConfirmation(message = message, title = "Graph Matrix Dialogue",
+                optionType = Dialog.Options.OkCancel)
+              if (option == Dialog.Result.Ok) {
+                val inputList = inputs.getText()
+                val outputList = outputs.getText()
+                // For Linux
+//                val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+                // For Windows
+                 val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+                var result = ""
+                var error = ""
+                val logger = ProcessLogger(
+                  (o: String) => println(o),
+                  (e: String) => error += e)
+                var errorOccurred = false
+                try {
+                  result = Process(command).!!(logger)
+                } catch {
+                  case e : Exception =>
+                    errorOccurred = true
+                    val errors = error.split("NameError: ")
+                    if (errors.length > 1) {
+                      result = "Error : " + error.split("NameError: ")(1)
+                    } else {
+                      result = error
+                    }
                 }
-
+                if (errorOccurred) {
+                  Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
+                } else {
+                  val resultArray = result.split("_______________")
+                  if (resultArray.length == 1){
+                    Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
+                  } else {
+                    val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
+                    Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                  }
+                }
               }
+              setMouseState(SelectTool())
             }
-            setMouseState(SelectTool())
           case _ =>
         }
       case _ =>
