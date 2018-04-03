@@ -6,7 +6,7 @@ To run this version of Quantomatic, you need:
 - Python3
 - JRE version 7 or newer
 
-For now, if you need only the .jar version if you can't compile for a reason, ask me directly at quantomatic.matrix@gmail.com
+For now, if you need only the .jar version and if you can't compile for a reason, ask me directly at quantomatic.matrix@gmail.com
 
 ## Compile
 To compile Quantomatic, you need:
