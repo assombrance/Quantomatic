@@ -12,7 +12,7 @@ $ sbt run
 with sbt installed
 ~~~~
 $ cd [project directory]/scala
-$ sbt run
+$ sbt assembly
 ~~~~
 
-On linux, you can use the stript `Quantomatic.sh` to run the compiles version
+On linux, you can use the stript `Quantomatic.sh` to run the compiled version
