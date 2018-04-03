@@ -31,6 +31,6 @@ $ sbt assembly
 On linux, you can use the stript `Quantomatic.sh` to run the compiled version
 
 ## Disclaimer
-This software is a for of the Quantomatic project from akissinger,
+This software is a for of the Quantomatic project from akissinger.
 Exept from the matrix bit, everything has been done [there](https://github.com/Quantomatic/quantomatic).
 This project may eventually be included in Quantomtic.
