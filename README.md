@@ -15,7 +15,7 @@ To compile Quantomatic, you need:
 - sbt
 
 ### Run from source
-Don't forget to install the pieces of software listed in the [##Run] section for this one
+Don't forget to install the pieces of software listed in the [#Run] section for this one
 ~~~~
 $ cd [project directory]/scala
 $ sbt run
