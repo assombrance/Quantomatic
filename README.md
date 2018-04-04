@@ -32,7 +32,6 @@ On linux and Mac OS, you can use the stript `Quantomatic.sh` to run the compiled
 Use `Quantomatic.bat` instead on Windows.
 
 ## Disclaimer
-This software is a for of the Quantomatic project from akissinger.
-Exept from the matrix bit, everything has been done [there](https://github.com/Quantomatic/quantomatic).
+This software is a for of the Quantomatic project from akissinger.  
+Exept from the matrix bit, everything has been done [there](https://github.com/Quantomatic/quantomatic).  
 This project may eventually be included in the official Quantomatic.
-Run
