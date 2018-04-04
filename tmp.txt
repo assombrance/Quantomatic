@@ -1,0 +1,68 @@
+LC_MEASUREMENT : fr_FR.UTF-8 
+XAUTHORITY : [...]
+LC_TELEPHONE : fr_FR.UTF-8 
+XMODIFIERS : @im=ibus 
+MANDATORY_PATH : /usr/share/gconf/ubuntu.mandatory.path 
+GDMSESSION : ubuntu 
+XDG_DATA_DIRS : /usr/share/ubuntu:/usr/share/gnome [...]
+LC_TIME : fr_FR.UTF-8 
+GTK_IM_MODULE : ibus 
+DBUS_SESSION_BUS_ADDRESS : unix:abstract=/tmp/dbus-uf6ywbkKqD 
+DEFAULTS_PATH : /usr/share/gconf/ubuntu.default.path 
+XDG_CURRENT_DESKTOP : Unity 
+QT4_IM_MODULE : xim 
+UPSTART_SESSION : unix:abstract=/com/ubuntu/upstart-session/1000/1320 
+LC_PAPER : fr_FR.UTF-8 
+QT_LINUX_ACCESSIBILITY_ALWAYS_ON : 1 
+SESSION_MANAGER : [...] 
+LOGNAME : [...]
+PWD : /home/[...]/Documents/Quanto-fusion/scala 
+JOB : unity-settings-daemon 
+IM_CONFIG_PHASE : 1 
+LANGUAGE : en_US 
+SHELL : /bin/bash 
+LC_ADDRESS : fr_FR.UTF-8 
+GIO_LAUNCHED_DESKTOP_FILE : /home/[...]/.local/share/applications/jetbrains-idea.desktop 
+GTK2_MODULES : overlay-scrollbar 
+INSTANCE :  
+GNOME_DESKTOP_SESSION_ID : this-is-deprecated 
+UPSTART_INSTANCE :  
+GTK_MODULES : gail:atk-bridge:unity-gtk-module 
+CLUTTER_IM_MODULE : xim 
+XDG_SESSION_PATH : /org/freedesktop/DisplayManager/Session0 
+SESSIONTYPE : gnome-session 
+COMPIZ_BIN_PATH : /usr/bin/ 
+XDG_SESSION_DESKTOP : ubuntu 
+SHLVL : 0 
+LC_IDENTIFICATION : fr_FR.UTF-8 
+LC_MONETARY : fr_FR.UTF-8 
+COMPIZ_CONFIG_PROFILE : ubuntu 
+QT_IM_MODULE : ibus 
+UPSTART_JOB : unity7 
+XDG_CONFIG_DIRS : /etc/xdg/xdg-ubuntu:/usr/share/upstart/xdg:/etc/xdg 
+XDG_SEAT_PATH : /org/freedesktop/DisplayManager/Seat0 
+LANG : en_US.UTF-8 
+GNOME_KEYRING_CONTROL :  
+XDG_SESSION_ID : c1 
+XDG_SESSION_TYPE : x11 
+DISPLAY : :0 
+LC_NAME : fr_FR.UTF-8 
+GDM_LANG : en_US 
+XDG_GREETER_DATA_DIR : /var/lib/lightdm-data/[...] 
+UPSTART_EVENTS : xsession started 
+DESKTOP_SESSION : ubuntu 
+GPG_AGENT_INFO : /home/[...]/.gnupg/S.gpg-agent:0:1 
+SESSION : ubuntu 
+USER : [...] 
+CLASSPATH : [...] 
+XDG_MENU_PREFIX : gnome- 
+GIO_LAUNCHED_DESKTOP_FILE_PID : 1936 
+QT_ACCESSIBILITY : 1 
+LC_NUMERIC : fr_FR.UTF-8 
+XDG_SEAT : seat0 
+SSH_AUTH_SOCK : /run/user/1000/keyring/ssh 
+QT_QPA_PLATFORMTHEME : appmenu-qt5 
+XDG_VTNR : 7 
+XDG_RUNTIME_DIR : /run/user/1000 
+HOME : /home/[...] 
+GNOME_KEYRING_PID :  
