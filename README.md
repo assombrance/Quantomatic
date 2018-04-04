@@ -5,6 +5,7 @@ ZX-calculus diagram to matrix plugin
 To run this version of Quantomatic, you need:
 - Python3
 - numpy (python package, more info [here](https://scipy.org/install.html))
+tldr : `pip3 install numpy` should do the trick
 - JRE version 7 or newer
 
 For now, if you need only the .jar version and if you can't compile for a reason, ask me directly at quantomatic.matrix@gmail.com
