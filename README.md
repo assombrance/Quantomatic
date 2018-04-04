@@ -28,7 +28,7 @@ $ cd [project directory]/scala
 $ sbt assembly
 ~~~~
 
-On linux, you can use the stript `Quantomatic.sh` to run the compiled version.
+On linux and Mac OS, you can use the stript `Quantomatic.sh` to run the compiled version. <br>
 Use `Quantomatic.bat` instead on Windows.
 
 ## Disclaimer
