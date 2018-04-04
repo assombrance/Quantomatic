@@ -4,7 +4,7 @@ ZX-calculus diagram to matrix plugin
 ## Run
 To run this version of Quantomatic, you need:
 - Python3
-- numpy (python package, more info [here](https://scipy.org/install.html)) <br>
+- numpy (python package, more info [here](https://scipy.org/install.html))  
 tldr : `pip3 install numpy` should do the trick
 - JRE version 7 or newer
 
@@ -28,7 +28,7 @@ $ cd [project directory]/scala
 $ sbt assembly
 ~~~~
 
-On linux and Mac OS, you can use the stript `Quantomatic.sh` to run the compiled version. <br>
+On linux and Mac OS, you can use the stript `Quantomatic.sh` to run the compiled version.  
 Use `Quantomatic.bat` instead on Windows.
 
 ## Disclaimer
