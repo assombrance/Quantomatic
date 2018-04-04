@@ -149,10 +149,13 @@ class GraphEditControls(theory: Theory) extends Publisher {
               if (option == Dialog.Result.Ok) {
                 val inputList = inputs.getText()
                 val outputList = outputs.getText()
-                // For Linux
-//                val command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
-                // For Windows
-                 val command = "python " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+                val OS = sys.env("OS")
+                var command = ""
+                if (OS.contains("Windows")){
+                  command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
+                } else {
+                  command = "python3 " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
+                }
                 var result = ""
                 var error = ""
                 val logger = ProcessLogger(
