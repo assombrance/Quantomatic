@@ -4,7 +4,7 @@ ZX-calculus diagram to matrix plugin
 ## Run
 To run this version of Quantomatic, you need:
 - Python3
-- numpy (python package, more info [here](https://scipy.org/install.html))
+- numpy (python package, more info [here](https://scipy.org/install.html)) <br>
 tldr : `pip3 install numpy` should do the trick
 - JRE version 7 or newer
 
