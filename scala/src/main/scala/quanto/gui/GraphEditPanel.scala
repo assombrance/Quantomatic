@@ -1,7 +1,6 @@
 package quanto.gui
 
 import javax.swing.{ImageIcon, JTextField}
-
 import quanto.data._
 import quanto.gui.graphview.GraphView
 import quanto.util.swing.ToolBar
@@ -9,6 +8,7 @@ import quanto.util.swing.ToolBar
 import scala.swing._
 import scala.swing.event._
 import scala.sys.process.{Process, ProcessLogger}
+import scala.util.Properties
 
 case class MouseStateChanged(m : MouseState) extends Event
 
@@ -138,9 +138,9 @@ class GraphEditControls(theory: Theory) extends Publisher {
             } else {
               val graphPath = doc.document.file.get.getAbsolutePath
               // For assembly
-              val mainPath = "src/main.py"
+//              val mainPath = "src/main.py"
               // For run
-              // val mainPath = "../src/main.py"
+              val mainPath = "../src/main.py"
               val inputs = new JTextField
               val outputs = new JTextField
               val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
@@ -149,12 +149,17 @@ class GraphEditControls(theory: Theory) extends Publisher {
               if (option == Dialog.Result.Ok) {
                 val inputList = inputs.getText()
                 val outputList = outputs.getText()
-                val OS = sys.env("OS")
+                val OS = Properties.envOrNone("OS")
+                var OSValue = ""
+                OS match {
+                  case Some(v) => OSValue = v
+                  case _ =>
+                }
                 var command = ""
                 if (OS.contains("Windows")){
                   command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
                 } else {
-                  command = "python3 " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
+                  command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
                 }
                 var result = ""
                 var error = ""
