@@ -11,11 +11,11 @@ For now, if you need only the .jar version and if you can't compile for a reason
 
 ## Compile
 To compile Quantomatic, you need:
-- Python3
 - JDK version 7 or newer
 - sbt
 
 ### Run from source
+Don't forget to install the pieces of software listed in the (##-Run) section for this one
 ~~~~
 $ cd [project directory]/scala
 $ sbt run
