@@ -137,9 +137,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
               )
             } else {
               val graphPath = doc.document.file.get.getAbsolutePath
-              // For assembly
-//              val mainPath = "src/main.py"
-              // For run
+              // the .jar is meant to be run form the scala directory
               val mainPath = "../src/main.py"
               val inputs = new JTextField
               val outputs = new JTextField
@@ -156,7 +154,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   case _ =>
                 }
                 var command = ""
-                if (OS.contains("Windows")){
+                if (OSValue.contains("Windows")){
                   command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
                 } else {
                   command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
