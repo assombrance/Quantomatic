@@ -138,27 +138,40 @@ class GraphEditControls(theory: Theory) extends Publisher {
             } else {
               val graphPath = doc.document.file.get.getAbsolutePath
               // the .jar is meant to be run form the scala directory
-              val mainPath = "../src/main.py"
-              val inputs = new JTextField
-              val outputs = new JTextField
-              val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
-              val option = Dialog.showConfirmation(message = message, title = "Graph Matrix Dialogue",
-                optionType = Dialog.Options.OkCancel)
-              if (option == Dialog.Result.Ok) {
-                val inputList = inputs.getText()
-                val outputList = outputs.getText()
-                val OS = Properties.envOrNone("OS")
-                var OSValue = ""
-                OS match {
-                  case Some(v) => OSValue = v
-                  case _ =>
-                }
+              val pythonSrcPath = "../src/"
+              val mainPath = pythonSrcPath + "main.py"
+              val numberedAnnotationsPath = pythonSrcPath + "numbered_annotations.py"
+              val OS = Properties.envOrNone("OS")
+              var OSValue = ""
+              OS match {
+                case Some(v) => OSValue = v
+                case _ =>
+              }
+              var command = ""
+              if (OSValue.contains("Windows")){
+                command = "python " + numberedAnnotationsPath + " \"" + graphPath + "\""
+              } else {
+                command = "python3 " + numberedAnnotationsPath + " " + graphPath
+              }
+              val numberedAnnotationsReturn = Process(command).!!
+              val numberedAnnotationsReturnArray = numberedAnnotationsReturn.split(";")
+              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll(" ", "")
+              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll(" ", "")
+              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll("\'", "")
+              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll("\'", "")
+              if (numberedAnnotationsReturnArray(0).contains("True")){
                 var command = ""
                 if (OSValue.contains("Windows")){
-                  command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
+                  command = "python " + mainPath + " \"" + graphPath + "\" " + numberedAnnotationsReturnArray(1) + " " +
+                    numberedAnnotationsReturnArray(2)
                 } else {
-                  command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+                  command = "python3 " + mainPath + " " + graphPath + " " + numberedAnnotationsReturnArray(1) + " " +
+                    numberedAnnotationsReturnArray(2)
                 }
+                System.out.println("\"" + command + "\"")
+                command = command.dropRight(2)
+//                command = command.replaceAll(raw"]  [", raw"] [")
+                System.out.println("\"" + command + "\"")
                 var result = ""
                 var error = ""
                 val logger = ProcessLogger(
@@ -186,6 +199,51 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   } else {
                     val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
                     Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                  }
+                }
+              } else {
+                val inputs = new JTextField
+                val outputs = new JTextField
+                val message: Array[AnyRef] = Array("Inputs:", inputs, "Outputs:", outputs)
+                val option = Dialog.showConfirmation(message = message, title = "Graph Matrix Dialogue",
+                  optionType = Dialog.Options.OkCancel)
+                if (option == Dialog.Result.Ok) {
+                  val inputList = inputs.getText()
+                  val outputList = outputs.getText()
+                  var command = ""
+                  if (OSValue.contains("Windows")){
+                    command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
+                  } else {
+                    command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
+                  }
+                  var result = ""
+                  var error = ""
+                  val logger = ProcessLogger(
+                    (o: String) => println(o),
+                    (e: String) => error += e)
+                  var errorOccurred = false
+                  try {
+                    result = Process(command).!!(logger)
+                  } catch {
+                    case e : Exception =>
+                      errorOccurred = true
+                      val errors = error.split("NameError: ")
+                      if (errors.length > 1) {
+                        result = "Error : " + error.split("NameError: ")(1)
+                      } else {
+                        result = error
+                      }
+                  }
+                  if (errorOccurred) {
+                    Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
+                  } else {
+                    val resultArray = result.split("_______________")
+                    if (resultArray.length == 1){
+                      Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
+                    } else {
+                      val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
+                      Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                    }
                   }
                 }
               }

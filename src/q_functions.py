@@ -174,10 +174,10 @@ def manage_ins_outs(wire_vertices_dictionary, undir_edges_dictionary, inputs_ord
                         undir_edges_dictionary[edge_name]['src'] == node_name:
                     if 'data' in undir_edges_dictionary[edge_name] and \
                             'label' in undir_edges_dictionary[edge_name]['data']:
-                        if undir_edges_dictionary[edge_name]['data']['label'] == 'input':
+                        if 'input' in undir_edges_dictionary[edge_name]['data']['label']:
                             inputs_order_list.append(node_name)
                             assumed_order = True
-                        elif undir_edges_dictionary[edge_name]['data']['label'] == 'output':
+                        elif 'output' in undir_edges_dictionary[edge_name]['data']['label']:
                             outputs_order_list.append(node_name)
                             assumed_order = True
                         else:

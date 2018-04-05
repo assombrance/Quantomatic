@@ -77,11 +77,11 @@ def debug(diagram_file_path):
             print('    ', entry2, ': ', diagram_dictionary[entry][entry2])
 
 
-inputList = list(map(str, sys.argv[2].strip('[]').split(',')))
+inputList = list(map(str, sys.argv[2].strip('[]').strip(' ').strip('\n').split(',')))
 if '' in inputList:
     inputList.remove('')
 
-outputList = list(map(str, sys.argv[3].strip('[]').split(',')))
+outputList = list(map(str, sys.argv[3].strip('[]').strip(' ').strip('\n').split(',')))
 if '' in outputList:
     outputList.remove('')
 
