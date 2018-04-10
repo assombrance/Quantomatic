@@ -182,7 +182,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     errorOccurred = true
                     val errors = error.split("NameError: ")
                     if (errors.length > 1) {
-                      result = "Error : " + error.split("NameError: ")(1)
+                      result = "Error : " + errors(1)
                     } else {
                       result = error
                     }
@@ -235,10 +235,11 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
                   } else {
                     val resultArray = result.split("_______________")
-                    if (resultArray.length == 1){
-                      Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
+                    if (resultArray.length == 1) {
+                      val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(0)))
+                      Dialog.showMessage(title = "Graph Matrix Result", message = content)
                     } else {
-                      val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
+                      val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
                       Dialog.showMessage(title = "Graph Matrix Result", message = content)
                     }
                   }
