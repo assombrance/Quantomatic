@@ -515,7 +515,11 @@ def remove_incompatible_nodes(nodes_list, nodes_list_names, edges):
     for edge in edges:
         for edge_name in edge:
             if edge[edge_name][0] in nodes_list_names and edge[edge_name][1] in nodes_list_names:
-                nodes_list_names.remove(edge[edge_name][0])
+                if edge[edge_name][0] == edge[edge_name][1]:
+                    raise NameError('This algorithm doesn\'t support looping edges, please remove the looping edge on '
+                                    'node \"' + edge[edge_name][0] + '\"')
+                else:
+                    nodes_list_names.remove(edge[edge_name][0])
                 for node in nodes_list:
                     for node_name in node:
                         if node_name == edge[edge_name][0]:

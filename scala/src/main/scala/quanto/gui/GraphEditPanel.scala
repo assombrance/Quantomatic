@@ -168,10 +168,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   command = "python3 " + mainPath + " " + graphPath + " " + numberedAnnotationsReturnArray(1) + " " +
                     numberedAnnotationsReturnArray(2)
                 }
-                System.out.println("\"" + command + "\"")
                 command = command.dropRight(2)
-//                command = command.replaceAll(raw"]  [", raw"] [")
-                System.out.println("\"" + command + "\"")
                 var result = ""
                 var error = ""
                 val logger = ProcessLogger(
@@ -181,7 +178,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                 try {
                   result = Process(command).!!(logger)
                 } catch {
-                  case e : Exception =>
+                  case _ : Exception =>
                     errorOccurred = true
                     val errors = error.split("NameError: ")
                     if (errors.length > 1) {
@@ -197,7 +194,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   if (resultArray.length == 1){
                     Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
                   } else {
-                    val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(1)))
+                    val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
                     Dialog.showMessage(title = "Graph Matrix Result", message = content)
                   }
                 }

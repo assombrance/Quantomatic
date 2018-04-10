@@ -214,7 +214,7 @@ def test_augment_graph():
     edges = [{'e0': ['v3', 'b3']}, {'e1': ['v1', 'b1']}, {'e2': ['v0', 'v2']}, {'e3': ['v2', 'b2']},
              {'e4': ['b0', 'v0']}, {'e5': ['v1', 'v0']}, {'e6': ['v1', 'v2']}, {'e7': ['v3', 'v4']}]
     augmented_graph, _ = qf.augment_graph(connected_graph, start_nodes, end_nodes, inside_nodes, edges)
-    print(augmented_graph)
+    # print(augmented_graph)
     expected_augmented_graph = {'start_nodes': [],
                                 'end_nodes': [{'b2': {}}],
                                 'inside_nodes': [{'v2': {}}, {'v1': {}}, {'v0': {}}],
@@ -434,7 +434,7 @@ def test_pre_permutation_edge_order_management():
     next_nodes_to_be_added_names = ['v6']
     result = qf.pre_permutation_edge_order_management(start_nodes_order, edges,
                                                       circuit_names, next_nodes_to_be_added_names)
-    print(result)
+    # print(result)
     expected_start_edges_order = [{'e1': ['v2', 'v6']}, {'e11': ['v0', 'v6']}, {'e12': ['b0', 'v2']}]
     assert result == expected_start_edges_order
 
