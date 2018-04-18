@@ -1,4 +1,5 @@
 import numpy as np
+import q_functions as qf
 
 # matrix = np.matrix([[0, 5, 0, 2],
 #                     [4, 0, 2, 0],
@@ -8,8 +9,13 @@ import numpy as np
 #           [4, 0, 2, 0],
 #           [3, 0, 0, 17],
 #           [0, 0, 9, 0]]
-matrix0 = np.matrix(np.random.randint(20, size=(100, 6)))
-matrix1 = np.matrix(np.random.randint(20, size=(6, 5)))
+small_size = 31
+small_matrix0 = np.matrix(np.random.randint(20, size=(small_size, small_size)))
+small_matrix1 = np.matrix(np.random.randint(20, size=(small_size, small_size)))
+size = small_size ** 2
+matrix0 = np.matrix(np.random.randint(20, size=(size, size)))
+matrix1 = np.matrix(np.random.randint(20, size=(size, size)))
+iterations = 1
 
 
 def naive_multiplication(m0: np.matrix, m1: np.matrix):
@@ -25,21 +31,25 @@ def naive_multiplication(m0: np.matrix, m1: np.matrix):
     return m01
 
 
-def test_naive_multiplication():
-    result = naive_multiplication(matrix0, matrix1)
-    expected_result = matrix0 * matrix1
-    # print(result)
-    # print(expected_result)
-    assert not (result - expected_result).any()
+# def test_naive_multiplication():
+#     result = naive_multiplication(matrix0, matrix1)
+#     expected_result = matrix0 * matrix1
+#     assert not (result - expected_result).any()
 
 
-def test_bench_naive():
-    for _ in np.arange(1000):
-        naive_multiplication(matrix0, matrix1)
-    assert True
+# def test_bench_naive():
+#     for _ in np.arange(iterations):
+#         naive_multiplication(matrix0, matrix1)
+#     assert True
 
 
 def test_bench_numpy():
-    for _ in np.arange(1000):
+    for _ in np.arange(iterations):
         _ = matrix0 * matrix1
+    assert True
+
+
+def test_bench_tensor():
+    for _ in np.arange(iterations):
+        _ = qf.tensor_product(small_matrix0, small_matrix1)
     assert True
