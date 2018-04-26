@@ -182,7 +182,8 @@ def test_image_by_permutation():
 def test_build_permutation_dictionary():
     pre = [1, 2, 3]
     post = [2, 1, 3]
-    # careful : binary representations are big-endian, so expected result may be a bit counter intuitive
+    # careful : binary representations are little-endian, so expected result may be a bit counter intuitive:
+    # 10 is stored as [0, 1, 0, 1] and not the opposite
     expected_result = {0: 0, 1: 2, 2: 1}
     actual_result = qf.build_permutation_dictionary(pre, post)
     assert expected_result == actual_result
