@@ -1,6 +1,7 @@
 import inspect
 import math
-from copy import copy, deepcopy
+import sys
+from copy import deepcopy
 from typing import List, TypeVar, Union, SupportsInt
 
 import numpy as np
@@ -89,7 +90,7 @@ class Pi4Matrix(AbstractMatrix):
     def size(self):
         return self.m0.size
 
-    def __new__(cls, m0, m1=None, m2=None, m3=None, z: int=0):
+    def __new__(cls, m0, m1=None, m2=None, m3=None, z: int = 0):
         if isinstance(m0, Pi4Matrix):
             return m0
         obj = np.asarray([0], dtype=int).view(cls)
@@ -127,7 +128,7 @@ class Pi4Matrix(AbstractMatrix):
         return new_one
 
     def __deepcopy__(self, *args):
-        cls = self.__class__
+        cls = self.__class__  # type: Pi4Matrix
         result = cls.__new__(cls, 0)
         for k, v in self.__dict__.items():
             setattr(result, k, deepcopy(v))
@@ -135,16 +136,16 @@ class Pi4Matrix(AbstractMatrix):
 
     def dot(self, b, out=None):
         _pi_4_b = Pi4Matrix(b)
-        if _pi_4_b.shape == self.shape:
+        if _pi_4_b.shape[0] == self.shape[1]:
             _z = _pi_4_b.z + self.z
-            _m0 = _pi_4_b.m0.dot(self.m0) + _pi_4_b.m1.dot(self.m3) + \
-                _pi_4_b.m2.dot(self.m2) + _pi_4_b.m3.dot(self.m1)
-            _m1 = _pi_4_b.m0.dot(self.m1) + _pi_4_b.m1.dot(self.m0) + \
-                _pi_4_b.m2.dot(self.m3) + _pi_4_b.m3.dot(self.m2)
-            _m2 = _pi_4_b.m0.dot(self.m2) + _pi_4_b.m1.dot(self.m1) + \
-                _pi_4_b.m2.dot(self.m0) + _pi_4_b.m3.dot(self.m3)
-            _m3 = _pi_4_b.m0.dot(self.m3) + _pi_4_b.m1.dot(self.m2) + \
-                _pi_4_b.m2.dot(self.m1) + _pi_4_b.m3.dot(self.m0)
+            _m0 = self.m0.dot(_pi_4_b.m0) + self.m1.dot(_pi_4_b.m3) + \
+                self.m2.dot(_pi_4_b.m2) + self.m3.dot(_pi_4_b.m1)
+            _m1 = self.m0.dot(_pi_4_b.m1) + self.m1.dot(_pi_4_b.m0) + \
+                self.m2.dot(_pi_4_b.m3) + self.m3.dot(_pi_4_b.m2)
+            _m2 = self.m0.dot(_pi_4_b.m2) + self.m1.dot(_pi_4_b.m1) + \
+                self.m2.dot(_pi_4_b.m0) + self.m3.dot(_pi_4_b.m3)
+            _m3 = self.m0.dot(_pi_4_b.m3) + self.m1.dot(_pi_4_b.m2) + \
+                self.m2.dot(_pi_4_b.m1) + self.m3.dot(_pi_4_b.m0)
             return Pi4Matrix(_m0, _m1, _m2, _m3, _z)
         raise ValueError('Size mismatch')
 
@@ -153,16 +154,16 @@ class Pi4Matrix(AbstractMatrix):
         if _pi_4_y.shape == self.shape:
             if self.z < _pi_4_y.z:
                 _z = self.z
-                _m0 = self.m0*(2**(_pi_4_y.z - self.z)) + _pi_4_y.m0
-                _m1 = self.m1*(2**(_pi_4_y.z - self.z)) + _pi_4_y.m1
-                _m2 = self.m2*(2**(_pi_4_y.z - self.z)) + _pi_4_y.m2
-                _m3 = self.m3*(2**(_pi_4_y.z - self.z)) + _pi_4_y.m3
+                _m0 = self.m0 * (2 ** (_pi_4_y.z - self.z)) + _pi_4_y.m0
+                _m1 = self.m1 * (2 ** (_pi_4_y.z - self.z)) + _pi_4_y.m1
+                _m2 = self.m2 * (2 ** (_pi_4_y.z - self.z)) + _pi_4_y.m2
+                _m3 = self.m3 * (2 ** (_pi_4_y.z - self.z)) + _pi_4_y.m3
             else:
                 _z = _pi_4_y.z
-                _m0 = self.m0 + _pi_4_y.m0*(2**(self.z - _pi_4_y.z))
-                _m1 = self.m1 + _pi_4_y.m1*(2**(self.z - _pi_4_y.z))
-                _m2 = self.m2 + _pi_4_y.m2*(2**(self.z - _pi_4_y.z))
-                _m3 = self.m3 + _pi_4_y.m3*(2**(self.z - _pi_4_y.z))
+                _m0 = self.m0 + _pi_4_y.m0 * (2 ** (self.z - _pi_4_y.z))
+                _m1 = self.m1 + _pi_4_y.m1 * (2 ** (self.z - _pi_4_y.z))
+                _m2 = self.m2 + _pi_4_y.m2 * (2 ** (self.z - _pi_4_y.z))
+                _m3 = self.m3 + _pi_4_y.m3 * (2 ** (self.z - _pi_4_y.z))
             return Pi4Matrix(_m0, _m1, _m2, _m3, _z)
         raise ValueError('Size mismatch')
 
@@ -177,16 +178,16 @@ class Pi4Matrix(AbstractMatrix):
         if _pi_4_y.shape == self.shape:
             if self.z < _pi_4_y.z:
                 _z = self.z
-                _m0 = self.m0*(2**(_pi_4_y.z - self.z)) - _pi_4_y.m0
-                _m1 = self.m1*(2**(_pi_4_y.z - self.z)) - _pi_4_y.m1
-                _m2 = self.m2*(2**(_pi_4_y.z - self.z)) - _pi_4_y.m2
-                _m3 = self.m3*(2**(_pi_4_y.z - self.z)) - _pi_4_y.m3
+                _m0 = self.m0 * (2 ** (_pi_4_y.z - self.z)) - _pi_4_y.m0
+                _m1 = self.m1 * (2 ** (_pi_4_y.z - self.z)) - _pi_4_y.m1
+                _m2 = self.m2 * (2 ** (_pi_4_y.z - self.z)) - _pi_4_y.m2
+                _m3 = self.m3 * (2 ** (_pi_4_y.z - self.z)) - _pi_4_y.m3
             else:
                 _z = _pi_4_y.z
-                _m0 = self.m0 - _pi_4_y.m0*(2**(self.z - _pi_4_y.z))
-                _m1 = self.m1 - _pi_4_y.m1*(2**(self.z - _pi_4_y.z))
-                _m2 = self.m2 - _pi_4_y.m2*(2**(self.z - _pi_4_y.z))
-                _m3 = self.m3 - _pi_4_y.m3*(2**(self.z - _pi_4_y.z))
+                _m0 = self.m0 - _pi_4_y.m0 * (2 ** (self.z - _pi_4_y.z))
+                _m1 = self.m1 - _pi_4_y.m1 * (2 ** (self.z - _pi_4_y.z))
+                _m2 = self.m2 - _pi_4_y.m2 * (2 ** (self.z - _pi_4_y.z))
+                _m3 = self.m3 - _pi_4_y.m3 * (2 ** (self.z - _pi_4_y.z))
             return Pi4Matrix(_m0, _m1, _m2, _m3, _z)
         raise ValueError('Size mismatch')
 
@@ -255,10 +256,10 @@ class Pi4Matrix(AbstractMatrix):
 
     def __eq__(self, other):
         pi_4_other = Pi4Matrix(other)
-        _m0 = (self.m0*self.z - pi_4_other.m0*pi_4_other.z).all()
-        _m1 = (self.m1*self.z - pi_4_other.m1*pi_4_other.z).all()
-        _m2 = (self.m2*self.z - pi_4_other.m2*pi_4_other.z).all()
-        _m3 = (self.m3*self.z - pi_4_other.m3*pi_4_other.z).all()
+        _m0 = (self.m0 * self.z - pi_4_other.m0 * pi_4_other.z).all()
+        _m1 = (self.m1 * self.z - pi_4_other.m1 * pi_4_other.z).all()
+        _m2 = (self.m2 * self.z - pi_4_other.m2 * pi_4_other.z).all()
+        _m3 = (self.m3 * self.z - pi_4_other.m3 * pi_4_other.z).all()
         return _m0 and _m1 and _m2 and _m3
 
     def __getitem__(self, key):
@@ -289,10 +290,10 @@ class Pi4Matrix(AbstractMatrix):
         else:
             _key = eval(repr(key))  # it looks stupid, and it is : a super weird bug causes the key to be poorly read,
             # but only in the __setitem__ for self.m0 (and others), this is the only fix I found, but I'll try to fix it
-            self.m0[_key] = value.m0*(2**(self.z - value.z))
-            self.m1[_key] = value.m1*(2**(self.z - value.z))
-            self.m2[_key] = value.m2*(2**(self.z - value.z))
-            self.m3[_key] = value.m3*(2**(self.z - value.z))
+            self.m0[_key] = value.m0 * (2 ** (self.z - value.z))
+            self.m1[_key] = value.m1 * (2 ** (self.z - value.z))
+            self.m2[_key] = value.m2 * (2 ** (self.z - value.z))
+            self.m3[_key] = value.m3 * (2 ** (self.z - value.z))
 
     def __delitem__(self, key):
         del self.m0[key]
@@ -643,6 +644,15 @@ class EnhancedInt(int):
             self[_i] = self[_i - 1]
         self[index] = value
 
+    def count(self, i: int) -> int:
+        if i != 0 and i != 1:
+            raise ValueError("Value must be 0 or 1, %d given" % i)
+        count = 0
+        for index in np.arange(self.bit_length()):
+            if self[index] == i:
+                count += 1
+        return count
+
     def bit_length(self):
         try:
             _last_1 = list(reversed(self)).index(1)
@@ -673,8 +683,163 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
     Returns:
         GenericMatrix:
     """
-    print(m1, m2, inputs, outputs, links)
-    return AbstractMatrix()
+    # use of while instead of for to be able to remove values inplace
+    iteration_index = 0
+    while iteration_index < len(links):
+        link = links[iteration_index]
+        removed_points = []  # type: List[ConnectionPoint]
+        # we don't need to memorize the points we'll add because we will always add them last
+        if link.point1.matrix == link.point2.matrix:
+            if link.point1.is_out != link.point2.is_out:
+                # set the point2 to the same side of the matrix as point1
+                # and remove the resulting cap or cup
+                if link.point1.matrix:
+                    if link.point1.is_out:
+                        m2 = input_to_output(m2, link.point1.index)
+                        m2 = remove_cap(m2, link.point2.index, -1)
+                    else:
+                        m2 = input_to_output(m2, link.point2.index)
+                        m2 = remove_cap(m2, link.point1.index, -1)
+                else:
+                    if link.point1.is_out:
+                        m1 = input_to_output(m1, link.point1.index)
+                        m1 = remove_cap(m1, link.point2.index, -1)
+                    else:
+                        m1 = input_to_output(m1, link.point2.index)
+                        m1 = remove_cap(m1, link.point1.index, -1)
+            elif link.point1.is_out:
+                # remove cup
+                if link.point1.matrix:
+                    m2 = remove_cup(m2, link.point1.index, link.point2.index)
+                else:
+                    m1 = remove_cup(m1, link.point1.index, link.point2.index)
+            else:
+                # remove cap
+                if link.point1.matrix:
+                    m2 = remove_cap(m2, link.point1.index, link.point2.index)
+                else:
+                    m1 = remove_cap(m1, link.point1.index, link.point2.index)
+            removed_points.append(link.point1)
+            removed_points.append(link.point2)
+        elif not link.point1.matrix and not link.point1.is_out:
+            # input from matrix 1 connected to matrix 2
+            # switch point1 to be an output
+            m1 = input_to_output(m1, link.point1.index)
+            removed_points.append(deepcopy(link.point1))
+            link.point1.is_out = True
+            link.point1.index = -1
+        elif not link.point2.matrix and not link.point2.is_out:
+            # input from matrix 1 connected to matrix 2
+            # switch point2 to be an output
+            m1 = input_to_output(m1, link.point2.index)
+            removed_points.append(deepcopy(link.point2))
+            link.point2.is_out = True
+            link.point2.index = -1
+        elif link.point2.matrix and link.point2.is_out:
+            # output from matrix 2 connected to matrix 1
+            # switch point2 to be an input
+            m2 = output_to_input(m2, link.point2.index)
+            removed_points.append(deepcopy(link.point2))
+            link.point2.is_out = False
+            link.point2.index = -1
+        elif link.point1.matrix and link.point1.is_out:
+            # output from matrix 2 connected to matrix 1
+            # switch point1 to be an input
+            m2 = output_to_input(m2, link.point1.index)
+            removed_points.append(deepcopy(link.point1))
+            link.point1.is_out = False
+            link.point1.index = -1  # TODO: better later ? problem with reference ?
+        # move the indexes of the other points to the correct new positions
+        if link.point1 in removed_points and link.point2 in removed_points:
+            del links[iteration_index]
+        else:
+            iteration_index += 1
+        if link.point1.index == -1:
+            if not link.point1.matrix:
+                if not link.point1.is_out:
+                    link.point1.index = EnhancedInt.from_list(m1.shape[1] * [1]) - 1  # TODO faux !
+                else:
+                    link.point1.index = EnhancedInt.from_list(m1.shape[0] * [1]) - 1  # TODO faux !
+            else:
+                if not link.point1.is_out:
+                    link.point1.index = EnhancedInt.from_list(m2.shape[1] * [1]) - 1  # TODO faux !
+                else:
+                    link.point1.index = EnhancedInt.from_list(m2.shape[0] * [1]) - 1  # TODO faux !
+        for removed_point in removed_points:
+            for link in links:
+                if link.point1.matrix == removed_point.matrix and link.point1.is_out == removed_point.is_out \
+                        and link.point1.index > removed_point.index:
+                    link.point1.index -= 1
+                if link.point2.matrix == removed_point.matrix and link.point2.is_out == removed_point.is_out \
+                        and link.point2.index > removed_point.index:
+                    link.point2.index -= 1
+            for input_point in inputs:
+                if input_point.matrix == removed_point.matrix and input_point.is_out == removed_point.is_out \
+                        and input_point.index > removed_point.index:
+                    input_point.index -= 1
+            for output_point in outputs:
+                if output_point.matrix == removed_point.matrix and output_point.is_out == removed_point.is_out \
+                        and output_point.index > removed_point.index:
+                    output_point.index -= 1
+    for input_point in inputs:
+        if input_point.is_out:
+            # change this input to be an input for the matrix
+            if not input_point.matrix:
+                m1 = output_to_input(m1, input_point.index)
+                input_point.is_out = False
+                input_point.index = EnhancedInt.from_list(m1.shape[1] * [1]) - 1  # TODO faux !
+            pass
+    for output_point in outputs:
+        if not output_point.is_out:
+            # change this output to be an output for the matrix
+            pass
+
+    inputs_m1 = [input_point for input_point in inputs if not input_point.matrix]
+    inputs_m1_sorted = sorted(inputs_m1, key=lambda input_m1: input_m1.index)
+
+    m1_m2_links = [link for link in links if link.point1.matrix != link.point2.matrix]
+    covering = len(m1_m2_links)
+
+    def links_sorter(_link: InterMatrixLink, _matrix: bool):
+        if _link.point1.matrix == _matrix:
+            return _link.point1.index
+        else:
+            return _link.point2.index
+
+    m1_m2_links_m1_sorted = sorted(m1_m2_links, key=lambda _link: links_sorter(_link, False))
+
+    outputs_m1_to_m2 = [link.point1 if link.point1.matrix else link.point2 for link in m1_m2_links_m1_sorted]
+    outputs_m1_to_output = [output_point for output_point in outputs if not output_point.matrix]
+
+    outputs_m1 = outputs_m1_to_output + outputs_m1_to_m2
+    outputs_m1_sorted = sorted(outputs_m1, key=lambda output_m1: output_m1.index)
+
+    m1_ordered = order_matrix(m1, inputs_m1, inputs_m1_sorted, outputs_m1_sorted, outputs_m1)
+
+    inputs_m2_from_inputs = [input_point for input_point in inputs if input_point.matrix]
+    inputs_m2_from_m1 = [link.point1 if not link.point1.matrix else link.point2 for link in m1_m2_links_m1_sorted]
+
+    inputs_m2 = inputs_m2_from_m1 + inputs_m2_from_inputs
+    inputs_m2_sorted = sorted(inputs_m2, key=lambda input_m2: input_m2.index)
+
+    outputs_m2 = [output_point for output_point in outputs if output_point.matrix]
+    outputs_m2_sorted = sorted(outputs_m2, key=lambda output_m2: output_m2.index)
+
+    m2_ordered = order_matrix(m2, inputs_m2, inputs_m2_sorted, outputs_m2, outputs_m2_sorted)
+
+    result = twisted_multiplication(m1_ordered, m2_ordered, covering)
+
+    group_inputs = inputs_m1 + inputs_m2_from_inputs
+    assert group_inputs == inputs
+    group_inputs_sorted = sorted(group_inputs, key=lambda input_group: input_group.index)
+
+    group_outputs = outputs_m1_to_output + outputs_m1
+    assert group_outputs == outputs
+    group_outputs_sorted = sorted(group_outputs, key=lambda output_group: output_group.index)
+
+    result_ordered = order_matrix(result, group_inputs, group_inputs_sorted, group_outputs, group_outputs_sorted)
+
+    return result_ordered
 
 
 def remove_cup(m: GenericMatrix, index1: int, index2: int) -> GenericMatrix:
@@ -736,9 +901,9 @@ def input_to_output(m: GenericMatrix, input_index: int, output_index: int = -1) 
         raise ValueError("Index out of bound, m output base size : %d and index2 given : %d" % (_output_base_size,
                                                                                                 output_index))
     try:
-        _result = UsedFragment(np.zeros((2**_new_output_base_size, 2**_new_input_base_size)), z=m.z)
+        _result = UsedFragment(np.zeros((2 ** _new_output_base_size, 2 ** _new_input_base_size)), z=m.z)
     except AttributeError:
-        _result = UsedFragment(np.zeros((2**_new_output_base_size, 2**_new_input_base_size)))
+        _result = UsedFragment(np.zeros((2 ** _new_output_base_size, 2 ** _new_input_base_size)))
 
     def _transformation(_i: EnhancedInt, _j: EnhancedInt, in_index: int, out_index: int):
         """
@@ -795,9 +960,9 @@ def output_to_input(m: GenericMatrix, output_index: int, input_index: int = -1) 
         raise ValueError("Index out of bound, m output base size : %d and index2 given : %d" % (_output_base_size,
                                                                                                 output_index))
     try:
-        _result = UsedFragment(np.zeros((2**_new_output_base_size, 2**_new_input_base_size)), z=m.z)
+        _result = UsedFragment(np.zeros((2 ** _new_output_base_size, 2 ** _new_input_base_size)), z=m.z)
     except AttributeError:
-        _result = UsedFragment(np.zeros((2**_new_output_base_size, 2**_new_input_base_size)))
+        _result = UsedFragment(np.zeros((2 ** _new_output_base_size, 2 ** _new_input_base_size)))
 
     def _transformation(_i: EnhancedInt, _j: EnhancedInt, in_index: int, out_index: int):
         """
@@ -833,16 +998,16 @@ def output_to_input(m: GenericMatrix, output_index: int, input_index: int = -1) 
     return _result
 
 
-def order_matrix(m: GenericMatrix, input_order: List[Node], matrix_input_order: List[Node],
-                 output_order: List[Node], matrix_output_order: List[Node]) -> GenericMatrix:
+def order_matrix(m: GenericMatrix, input_order: list, matrix_input_order: list,
+                 output_order: list, matrix_output_order: list) -> GenericMatrix:
     """
 
     Args:
         m (GenericMatrix):
-        input_order (List[Node]):
-        matrix_input_order (List[Node]):
-        output_order (List[Node]):
-        matrix_output_order (List[Node]):
+        input_order (list):
+        matrix_input_order (list):
+        output_order (list):
+        matrix_output_order (list):
 
     Returns:
         GenericMatrix:
@@ -902,8 +1067,33 @@ def twisted_multiplication(m1: GenericMatrix, m2: GenericMatrix, covering: int) 
     Returns:
         GenericMatrix
     """
-    print(m1, m2, covering)
-    return AbstractMatrix()
+    list_m1 = []  # type: List[UsedFragment]
+    list_m2 = []  # type: List[UsedFragment]
+    height_m1, width_m1 = EnhancedInt(m1.shape[0]), EnhancedInt(m1.shape[1])
+    height_m2, width_m2 = EnhancedInt(m1.shape[0]), EnhancedInt(m1.shape[1])
+    if height_m1.count(1) != 1 or width_m1.count(1) != 1:
+        raise ValueError('Matrices shape should be perfect powers of 2, but (%d,%d) received for m1' % (height_m1,
+                                                                                                        width_m1))
+    if height_m2.count(1) != 1 or width_m2.count(1) != 1:
+        raise ValueError('Matrices shape should be perfect powers of 2, but (%d,%d) received for m2' % (height_m1,
+                                                                                                        width_m1))
+    for i in np.arange(height_m1 >> covering):
+        list_m1.append(m1[i * 2 ** covering:(i + 1) * 2 ** covering, :])
+    for i in np.arange(width_m2 >> covering):
+        list_m2.append(m2[:, i::width_m2 >> covering])
+
+    list_m12 = []  # type: List[List[UsedFragment]]
+    for i in np.arange(height_m1 >> covering):
+        list_m12_i = []  # type: List[UsedFragment]
+        for j in np.arange(width_m2 >> covering):
+            list_m12_i.append(list_m2[j].dot(list_m1[i]))
+        list_m12.append(list_m12_i)
+
+    result = UsedFragment(np.zeros(((height_m1 * height_m2) >> covering, (width_m2 * width_m1) >> covering)))
+    for i in np.arange(height_m1 >> covering):
+        for j in np.arange(width_m2 >> covering):
+            result[i * height_m1: (i + 1) * height_m1, j::width_m2 >> covering] = list_m12[i][j]
+    return result
 
 
 am = Pi4Matrix([[0, 0, 0, 0, 0, 0, 0, 0],
@@ -915,16 +1105,20 @@ am = Pi4Matrix([[0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 7]])
 
+# am = Pi4Matrix([[0, 0, 0, 0],
+#                 [0, 1, 0, 0],
+#                 [0, 0, 2, 0],
+#                 [0, 0, 0, 3]])
+
 # am = Pi4Matrix([[0,   1,  2,  3],
 #                 [10, 11, 12, 13],
 #                 [20, 21, 22, 23],
 #                 [30, 31, 32, 33]])
 
+# am = Pi4Matrix([[1, 2], [3, 4]])
 
-node0 = Node('0')
-node1 = Node('1')
-node2 = Node('2')
+# print(order_matrix(am, [0, 2, 1], [0, 1, 2], [0, 1, 2], [0, 1, 2]))
 
-print(order_matrix(am, [node0, node2, node1], [node0, node1, node2], [node0, node1, node2], [node0, node1, node2]))
-
-# print(order_matrix(am, [node0, node1, node2], [node0, node1, node2], [node0, node1, node2], [node0, node1, node2]))
+np.set_printoptions(threshold=sys.maxsize)
+np.set_printoptions(linewidth=sys.maxsize)
+print(twisted_multiplication(am, am, 1))
