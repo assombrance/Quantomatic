@@ -34,8 +34,8 @@ class Node(PrettyStr, AtrComparison):
 
 
 class ConnectionPoint(PrettyStr, AtrComparison):
-    def __init__(self, matrix=False, is_out=False, index=0) -> None:
-        self.matrix = matrix
+    def __init__(self, is_matrix_2=False, is_out=False, index=0) -> None:
+        self.is_matrix_2 = is_matrix_2
         self.is_out = is_out
         self.index = index
 
@@ -215,10 +215,10 @@ class Pi4Matrix(AbstractMatrix):
         return self
 
     def any(self, axis=None, out=None):
-        return super().any(axis, out)
+        return self.m0.any(axis, out) or self.m1.any(axis, out) or self.m2.any(axis, out) or self.m3.any(axis, out)
 
     def all(self, axis=None, out=None):
-        return super().all(axis, out)
+        return self.m0.any(axis, out) and self.m1.any(axis, out) and self.m2.any(axis, out) and self.m3.any(axis, out)
 
     def reshape(self, shape, *shapes, order='C'):
         _m0 = self.m0.reshape(shape, *shapes, order)
@@ -255,12 +255,7 @@ class Pi4Matrix(AbstractMatrix):
         super().__sizeof__(*args, **kwargs)
 
     def __eq__(self, other):
-        pi_4_other = Pi4Matrix(other)
-        _m0 = (self.m0 * self.z - pi_4_other.m0 * pi_4_other.z).all()
-        _m1 = (self.m1 * self.z - pi_4_other.m1 * pi_4_other.z).all()
-        _m2 = (self.m2 * self.z - pi_4_other.m2 * pi_4_other.z).all()
-        _m3 = (self.m3 * self.z - pi_4_other.m3 * pi_4_other.z).all()
-        return _m0 and _m1 and _m2 and _m3
+        return not (self - other).any()
 
     def __getitem__(self, key):
         return Pi4Matrix(self.m0[key], self.m1[key], self.m2[key], self.m3[key], self.z)
@@ -667,8 +662,8 @@ GenericMatrix = TypeVar('GenericMatrix', np.matrix, AbstractMatrix)
 UsedFragment = Pi4Matrix
 
 
-def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[ConnectionPoint],
-                    outputs: List[ConnectionPoint], links: List[InterMatrixLink]) -> GenericMatrix:
+def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, _inputs: List[ConnectionPoint],
+                    _outputs: List[ConnectionPoint], _links: List[InterMatrixLink]) -> GenericMatrix:
     """ Main component of the V2 of the algorithm uses clever algorithms to lower the complexity.
     The two matrices are in sequence, but don't have to be fully connected (or at all, in that case we fall back in the
     tensor product case)
@@ -676,24 +671,24 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
     Args:
         m1 (GenericMatrix):
         m2 (GenericMatrix):
-        inputs (List[ConnectionPoint]):
-        outputs (List[ConnectionPoint]):
-        links (List[InterMatrixLink]):
+        _inputs (List[ConnectionPoint]):
+        _outputs (List[ConnectionPoint]):
+        _links (List[InterMatrixLink]):
 
     Returns:
         GenericMatrix:
     """
     # use of while instead of for to be able to remove values inplace
     iteration_index = 0
-    while iteration_index < len(links):
-        link = links[iteration_index]
+    while iteration_index < len(_links):
+        link = _links[iteration_index]
         removed_points = []  # type: List[ConnectionPoint]
         # we don't need to memorize the points we'll add because we will always add them last
-        if link.point1.matrix == link.point2.matrix:
+        if link.point1.is_matrix_2 == link.point2.is_matrix_2:
             if link.point1.is_out != link.point2.is_out:
                 # set the point2 to the same side of the matrix as point1
                 # and remove the resulting cap or cup
-                if link.point1.matrix:
+                if link.point1.is_matrix_2:
                     if link.point1.is_out:
                         m2 = input_to_output(m2, link.point1.index)
                         m2 = remove_cap(m2, link.point2.index, -1)
@@ -709,135 +704,144 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
                         m1 = remove_cap(m1, link.point1.index, -1)
             elif link.point1.is_out:
                 # remove cup
-                if link.point1.matrix:
+                if link.point1.is_matrix_2:
                     m2 = remove_cup(m2, link.point1.index, link.point2.index)
                 else:
                     m1 = remove_cup(m1, link.point1.index, link.point2.index)
             else:
                 # remove cap
-                if link.point1.matrix:
+                if link.point1.is_matrix_2:
                     m2 = remove_cap(m2, link.point1.index, link.point2.index)
                 else:
                     m1 = remove_cap(m1, link.point1.index, link.point2.index)
             removed_points.append(link.point1)
             removed_points.append(link.point2)
-        elif not link.point1.matrix and not link.point1.is_out:
+        elif not link.point1.is_matrix_2 and not link.point1.is_out:
             # input from matrix 1 connected to matrix 2
             # switch point1 to be an output
             m1 = input_to_output(m1, link.point1.index)
             removed_points.append(deepcopy(link.point1))
             link.point1.is_out = True
             link.point1.index = -1
-        elif not link.point2.matrix and not link.point2.is_out:
+        elif not link.point2.is_matrix_2 and not link.point2.is_out:
             # input from matrix 1 connected to matrix 2
             # switch point2 to be an output
             m1 = input_to_output(m1, link.point2.index)
             removed_points.append(deepcopy(link.point2))
             link.point2.is_out = True
             link.point2.index = -1
-        elif link.point2.matrix and link.point2.is_out:
+        elif link.point2.is_matrix_2 and link.point2.is_out:
             # output from matrix 2 connected to matrix 1
             # switch point2 to be an input
             m2 = output_to_input(m2, link.point2.index)
             removed_points.append(deepcopy(link.point2))
             link.point2.is_out = False
             link.point2.index = -1
-        elif link.point1.matrix and link.point1.is_out:
+        elif link.point1.is_matrix_2 and link.point1.is_out:
             # output from matrix 2 connected to matrix 1
             # switch point1 to be an input
             m2 = output_to_input(m2, link.point1.index)
             removed_points.append(deepcopy(link.point1))
             link.point1.is_out = False
-            link.point1.index = -1  # TODO: better later ? problem with reference ?
+            link.point1.index = -1
         # move the indexes of the other points to the correct new positions
         if link.point1 in removed_points and link.point2 in removed_points:
-            del links[iteration_index]
+            del _links[iteration_index]
         else:
             iteration_index += 1
         if link.point1.index == -1:
-            if not link.point1.matrix:
+            if not link.point1.is_matrix_2:
                 if not link.point1.is_out:
-                    link.point1.index = EnhancedInt.from_list(m1.shape[1] * [1]) - 1  # TODO faux !
+                    link.point1.index = EnhancedInt.from_list(m1.shape[1]).bit_length() - 1
                 else:
-                    link.point1.index = EnhancedInt.from_list(m1.shape[0] * [1]) - 1  # TODO faux !
+                    link.point1.index = EnhancedInt.from_list(m1.shape[0]).bit_length() - 1
             else:
                 if not link.point1.is_out:
-                    link.point1.index = EnhancedInt.from_list(m2.shape[1] * [1]) - 1  # TODO faux !
+                    link.point1.index = EnhancedInt.from_list(m2.shape[1]).bit_length() - 1
                 else:
-                    link.point1.index = EnhancedInt.from_list(m2.shape[0] * [1]) - 1  # TODO faux !
+                    link.point1.index = EnhancedInt.from_list(m2.shape[0]).bit_length() - 1
         for removed_point in removed_points:
-            for link in links:
-                if link.point1.matrix == removed_point.matrix and link.point1.is_out == removed_point.is_out \
+            for link in _links:
+                if link.point1.is_matrix_2 == removed_point.is_matrix_2 and link.point1.is_out == removed_point.is_out \
                         and link.point1.index > removed_point.index:
                     link.point1.index -= 1
-                if link.point2.matrix == removed_point.matrix and link.point2.is_out == removed_point.is_out \
+                if link.point2.is_matrix_2 == removed_point.is_matrix_2 and link.point2.is_out == removed_point.is_out \
                         and link.point2.index > removed_point.index:
                     link.point2.index -= 1
-            for input_point in inputs:
-                if input_point.matrix == removed_point.matrix and input_point.is_out == removed_point.is_out \
+            for input_point in _inputs:
+                if input_point.is_matrix_2 == removed_point.is_matrix_2 and input_point.is_out == removed_point.is_out \
                         and input_point.index > removed_point.index:
                     input_point.index -= 1
-            for output_point in outputs:
-                if output_point.matrix == removed_point.matrix and output_point.is_out == removed_point.is_out \
+            for output_point in _outputs:
+                if output_point.is_matrix_2 == removed_point.is_matrix_2 \
+                        and output_point.is_out == removed_point.is_out \
                         and output_point.index > removed_point.index:
                     output_point.index -= 1
-    for input_point in inputs:
+    for input_point in _inputs:
         if input_point.is_out:
+
             # change this input to be an input for the matrix
-            if not input_point.matrix:
+            if not input_point.is_matrix_2:
                 m1 = output_to_input(m1, input_point.index)
-                input_point.is_out = False
-                input_point.index = EnhancedInt.from_list(m1.shape[1] * [1]) - 1  # TODO faux !
-            pass
-    for output_point in outputs:
+                input_point.index = EnhancedInt.from_list(m1.shape[1]).bit_length() - 1
+            else:
+                m2 = output_to_input(m2, input_point.index)
+                input_point.index = EnhancedInt.from_list(m2.shape[1]).bit_length() - 1
+            input_point.is_out = False
+    for output_point in _outputs:
         if not output_point.is_out:
             # change this output to be an output for the matrix
-            pass
+            if not output_point.is_matrix_2:
+                m1 = input_to_output(m1, output_point.index)
+                output_point.index = EnhancedInt.from_list(m1.shape[0]).bit_length() - 1
+            else:
+                m2 = input_to_output(m2, output_point.index)
+                output_point.index = EnhancedInt.from_list(m2.shape[0]).bit_length() - 1
+            output_point.is_out = False
 
-    inputs_m1 = [input_point for input_point in inputs if not input_point.matrix]
-    inputs_m1_sorted = sorted(inputs_m1, key=lambda input_m1: input_m1.index)
-
-    m1_m2_links = [link for link in links if link.point1.matrix != link.point2.matrix]
+    # prepare lists to reorder m1
+    m1_m2_links = [link for link in _links if link.point1.is_matrix_2 != link.point2.is_matrix_2]
+    m1_m2_links_m1_sorted = sorted(m1_m2_links, key=lambda _link: _link.point1.index if not _link.point1.is_matrix_2
+                                   else _link.point2.index)
     covering = len(m1_m2_links)
 
-    def links_sorter(_link: InterMatrixLink, _matrix: bool):
-        if _link.point1.matrix == _matrix:
-            return _link.point1.index
-        else:
-            return _link.point2.index
+    inputs_m1 = [input_point for input_point in _inputs if not input_point.is_matrix_2]
+    inputs_m1_sorted = sorted(inputs_m1, key=lambda input_m1: input_m1.index)
 
-    m1_m2_links_m1_sorted = sorted(m1_m2_links, key=lambda _link: links_sorter(_link, False))
-
-    outputs_m1_to_m2 = [link.point1 if link.point1.matrix else link.point2 for link in m1_m2_links_m1_sorted]
-    outputs_m1_to_output = [output_point for output_point in outputs if not output_point.matrix]
+    outputs_m1_to_m2 = [link.point1 if link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
+    outputs_m1_to_output = [output_point for output_point in _outputs if not output_point.is_matrix_2]
 
     outputs_m1 = outputs_m1_to_output + outputs_m1_to_m2
     outputs_m1_sorted = sorted(outputs_m1, key=lambda output_m1: output_m1.index)
 
+    # order m1
     m1_ordered = order_matrix(m1, inputs_m1, inputs_m1_sorted, outputs_m1_sorted, outputs_m1)
 
-    inputs_m2_from_inputs = [input_point for input_point in inputs if input_point.matrix]
-    inputs_m2_from_m1 = [link.point1 if not link.point1.matrix else link.point2 for link in m1_m2_links_m1_sorted]
+    # prepare lists to reorder m2
+    inputs_m2_from_inputs = [input_point for input_point in _inputs if input_point.is_matrix_2]
+    inputs_m2_from_m1 = [link.point1 if not link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
 
     inputs_m2 = inputs_m2_from_m1 + inputs_m2_from_inputs
     inputs_m2_sorted = sorted(inputs_m2, key=lambda input_m2: input_m2.index)
 
-    outputs_m2 = [output_point for output_point in outputs if output_point.matrix]
+    outputs_m2 = [output_point for output_point in _outputs if output_point.is_matrix_2]
     outputs_m2_sorted = sorted(outputs_m2, key=lambda output_m2: output_m2.index)
 
+    # order m2
     m2_ordered = order_matrix(m2, inputs_m2, inputs_m2_sorted, outputs_m2, outputs_m2_sorted)
 
+    # reunite the matrices
     result = twisted_multiplication(m1_ordered, m2_ordered, covering)
 
-    group_inputs = inputs_m1 + inputs_m2_from_inputs
-    assert group_inputs == inputs
-    group_inputs_sorted = sorted(group_inputs, key=lambda input_group: input_group.index)
+    # prepare lists to reorder the result
+    inputs_m2_from_inputs_sorted = sorted(inputs_m2_from_inputs, key=lambda input_m2: input_m2.index)
+    group_inputs = inputs_m1_sorted + inputs_m2_from_inputs_sorted
 
-    group_outputs = outputs_m1_to_output + outputs_m1
-    assert group_outputs == outputs
-    group_outputs_sorted = sorted(group_outputs, key=lambda output_group: output_group.index)
+    outputs_m1_to_output_sorted = sorted(outputs_m1_to_output, key=lambda output_m1: output_m1.index)
+    group_outputs = outputs_m1_to_output_sorted + outputs_m2_sorted
 
-    result_ordered = order_matrix(result, group_inputs, group_inputs_sorted, group_outputs, group_outputs_sorted)
+    # order result
+    result_ordered = order_matrix(result, _inputs, group_inputs, _outputs, group_outputs)
 
     return result_ordered
 
@@ -1096,19 +1100,19 @@ def twisted_multiplication(m1: GenericMatrix, m2: GenericMatrix, covering: int) 
     return result
 
 
-am = Pi4Matrix([[0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 2, 0, 0, 0, 0, 0],
-                [0, 0, 0, 3, 0, 0, 0, 0],
-                [0, 0, 0, 0, 4, 0, 0, 0],
-                [0, 0, 0, 0, 0, 5, 0, 0],
-                [0, 0, 0, 0, 0, 0, 6, 0],
-                [0, 0, 0, 0, 0, 0, 0, 7]])
+# am = Pi4Matrix([[0, 0, 0, 0, 0, 0, 0, 0],
+#                 [0, 1, 0, 0, 0, 0, 0, 0],
+#                 [0, 0, 2, 0, 0, 0, 0, 0],
+#                 [0, 0, 0, 3, 0, 0, 0, 0],
+#                 [0, 0, 0, 0, 4, 0, 0, 0],
+#                 [0, 0, 0, 0, 0, 5, 0, 0],
+#                 [0, 0, 0, 0, 0, 0, 6, 0],
+#                 [0, 0, 0, 0, 0, 0, 0, 7]])
 
-# am = Pi4Matrix([[0, 0, 0, 0],
-#                 [0, 1, 0, 0],
-#                 [0, 0, 2, 0],
-#                 [0, 0, 0, 3]])
+am = Pi4Matrix([[0, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 2, 0],
+                [0, 0, 0, 3]])
 
 # am = Pi4Matrix([[0,   1,  2,  3],
 #                 [10, 11, 12, 13],
@@ -1119,6 +1123,15 @@ am = Pi4Matrix([[0, 0, 0, 0, 0, 0, 0, 0],
 
 # print(order_matrix(am, [0, 2, 1], [0, 1, 2], [0, 1, 2], [0, 1, 2]))
 
+inputs = [ConnectionPoint(index=0), ConnectionPoint(index=1), ConnectionPoint(index=1, is_matrix_2=True)]
+# inputs = [ConnectionPoint(index=0), ConnectionPoint(index=1, is_matrix_2=True), ConnectionPoint(index=1)]
+outputs = [ConnectionPoint(index=0, is_out=True), ConnectionPoint(index=0, is_matrix_2=True, is_out=True),
+           ConnectionPoint(index=1, is_matrix_2=True, is_out=True)]
+links = [InterMatrixLink(ConnectionPoint(is_out=True, index=1), ConnectionPoint(is_matrix_2=True, index=0))]
+
 np.set_printoptions(threshold=sys.maxsize)
 np.set_printoptions(linewidth=sys.maxsize)
-print(twisted_multiplication(am, am, 1))
+# print(twisted_multiplication(am, am, 1))
+# should be the same as :
+# print(fusion_matrices(am, am, inputs, outputs, links) == twisted_multiplication(am, am, 1))
+print(fusion_matrices(am, am, inputs, outputs, links))
