@@ -43,13 +43,13 @@ def naive_multiplication(m0: np.matrix, m1: np.matrix):
 #     assert True
 
 
-def test_bench_numpy():
-    for _ in np.arange(iterations):
-        _ = matrix0 * matrix1
-    assert True
-
-
-def test_bench_tensor():
-    for _ in np.arange(iterations):
-        _ = qf.tensor_product(small_matrix0, small_matrix1)
-    assert True
+# def test_bench_numpy():
+#     for _ in np.arange(iterations):
+#         _ = matrix0 * matrix1
+#     assert True
+#
+#
+# def test_bench_tensor():
+#     for _ in np.arange(iterations):
+#         _ = qf.tensor_product(small_matrix0, small_matrix1)
+#     assert True
