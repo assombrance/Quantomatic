@@ -26,21 +26,21 @@ def main(diagram_file_path: str, inputs: List[str], outputs: List[str]):
     end_wires = i_o_to_data(outputs, wires)
 
     m = qf.split_and_reunite(nodes, edges, start_wires, end_wires)
-    print('____wires____')
-    for wire in wires:
-        print(wire)
-    print('____start_wires____')
-    for wire in start_wires:
-        print(wire)
-    print('____end_wires____')
-    for wire in end_wires:
-        print(wire)
-    print('____edges____')
-    for edge in edges:
-        print(edge)
-    print('____nodes____')
-    for node in nodes:
-        print(node)
+    # print('____wires____')
+    # for wire in wires:
+    #     print(wire)
+    # print('____start_wires____')
+    # for wire in start_wires:
+    #     print(wire)
+    # print('____end_wires____')
+    # for wire in end_wires:
+    #     print(wire)
+    # print('____edges____')
+    # for edge in edges:
+    #     print(edge)
+    # print('____nodes____')
+    # for node in nodes:
+    #     print(node)
     return assumed_order, inputs, outputs, m
 
 

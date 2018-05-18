@@ -63,12 +63,12 @@ def wires_to_connection_point(wires: List[Wire], edges: List[Edge], nodes_group_
             if node in edge:
                 if set(edge).intersection(wires):
                     wire_index = wires.index(list(set(edge).intersection(wires))[0])
-                    point = ConnectionPoint(is_matrix_2=True, is_out=not is_output, index=index)
+                    point = ConnectionPoint(is_matrix_2=True, is_out=is_output, index=index)
                     connection_points_dict[wire_index] = point
                     index += 1
                 if edge.name in [wire.name for wire in wires]:
                     wire_index = wires.index(Wire(edge.name))
-                    point = ConnectionPoint(is_matrix_2=True, is_out=not is_output, index=index)
+                    point = ConnectionPoint(is_matrix_2=True, is_out=is_output, index=index)
                     connection_points_dict[wire_index] = point
                     index += 1
     for i in np.arange(len(wires)):

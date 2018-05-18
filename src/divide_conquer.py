@@ -80,7 +80,7 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
             m2 = output_to_input(m2, link.point2.index)
             removed_points.append(deepcopy(link.point2))
             link.point2.is_out = False
-            link.point2.index = -1
+            link.point2.index = -1  # TODO index problem here and in similar places perhaps ...
         elif link.point1.is_matrix_2 and link.point1.is_out:
             # output from matrix 2 connected to matrix 1
             # switch point1 to be an input
@@ -145,7 +145,7 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
     # prepare lists to reorder m1
     m1_m2_links = [link for link in links if link.point1.is_matrix_2 != link.point2.is_matrix_2]
     m1_m2_links_m1_sorted = sorted(m1_m2_links, key=lambda _link: _link.point1.index if not _link.point1.is_matrix_2
-    else _link.point2.index)
+                                   else _link.point2.index)
     covering = len(m1_m2_links)
 
     inputs_m1 = [input_point for input_point in inputs if not input_point.is_matrix_2]
@@ -263,15 +263,14 @@ def input_to_output(m: GenericMatrix, input_index: int, output_index: int = -1) 
         Returns:
 
         """
-        new_i = deepcopy(_i)
-        new_i.insert(out_index, _j[in_index])
+        _i.insert(out_index, _j[in_index])
         del _j[in_index]
-        return new_i, _j
+        return _i, _j
 
     _matrix = UsedFragment(m)
     for _i in np.arange(2 ** _output_base_size):
-        _enhanced_i = EnhancedInt(_i)
         for _j in np.arange(2 ** _input_base_size):
+            _enhanced_i = EnhancedInt(_i)
             _enhanced_j = EnhancedInt(_j)
             if output_index < 0:
                 _output_index = _new_output_base_size + output_index
@@ -331,8 +330,8 @@ def output_to_input(m: GenericMatrix, output_index: int, input_index: int = -1) 
 
     _matrix = UsedFragment(m)
     for _i in np.arange(2 ** output_base_size):
-        _enhanced_i = EnhancedInt(_i)
         for _j in np.arange(2 ** input_base_size):
+            _enhanced_i = EnhancedInt(_i)
             _enhanced_j = EnhancedInt(_j)
             if input_index < 0:
                 _input_index = new_input_base_size + input_index
