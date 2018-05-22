@@ -1,3 +1,4 @@
+# from __future__ import annotations
 import inspect
 import math
 from copy import deepcopy
@@ -278,12 +279,7 @@ class Pi4Matrix(AbstractMatrix):
                 base[-1, -1] = -1
                 null_base = np.zeros((2, 2))
                 h = Pi4Matrix(null_base, base, null_base, -base, 1)
-                # TODO tmp, clean later
-                a = h.tensor_power(out_number)
-                b = h.tensor_power(in_number)
-                c = a.dot(result)
-                result = c.dot(b)
-                # result = (h.tensor_power(out_number)).dot(result).dot(h.tensor_power(in_number))
+                result = (h.tensor_power(out_number)).dot(result).dot(h.tensor_power(in_number))
         else:
             raise ValueError('Unknown node type: %s' % node.node_type)
         return result
@@ -357,11 +353,7 @@ class Pi4Matrix(AbstractMatrix):
         if power == 0:
             return Pi4Matrix(np.identity(1))
         else:
-            # TODO tmp, clean later
-            iter_pow = self.tensor_power(power - 1)
-            res = self.tensor_product(iter_pow)
-            return res
-            # return self.tensor_product(self.tensor_power(power - 1))
+            return self.tensor_product(self.tensor_power(power - 1))
 
     def __copy__(self, *args):
         new_one = type(self)(0)
@@ -375,7 +367,7 @@ class Pi4Matrix(AbstractMatrix):
             setattr(result, k, deepcopy(v))
         return result
 
-    def dot(self, b, out=None):
+    def dot(self, b, out=None) -> 'Pi4Matrix':
         _pi_4_b = Pi4Matrix(b)
         if _pi_4_b.shape[0] == self.shape[1]:
             _z = _pi_4_b.z + self.z

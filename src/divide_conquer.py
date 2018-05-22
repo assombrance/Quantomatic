@@ -25,8 +25,8 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
     # use of while instead of for to be able to remove values inplace
     iteration_index = 0
     while iteration_index < len(links):
-        link = links[iteration_index]
         removed_points = []  # type: List[ConnectionPoint]
+        link = links[iteration_index]
         # we don't need to memorize the points we'll add because we will always add them last
         if link.point1.is_matrix_2 == link.point2.is_matrix_2:
             if link.point1.is_out != link.point2.is_out:
@@ -66,28 +66,32 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
             m1 = input_to_output(m1, link.point1.index)
             removed_points.append(deepcopy(link.point1))
             link.point1.is_out = True
-            link.point1.index = -1
+            m1_height = EnhancedInt(m1.shape[0])
+            link.point1.index = max((m1_height - 1).bit_length() - 1, 0)
         elif not link.point2.is_matrix_2 and not link.point2.is_out:
             # input from matrix 1 connected to matrix 2
             # switch point2 to be an output
             m1 = input_to_output(m1, link.point2.index)
             removed_points.append(deepcopy(link.point2))
             link.point2.is_out = True
-            link.point2.index = -1
+            m1_height = EnhancedInt(m1.shape[0])
+            link.point2.index = max((m1_height - 1).bit_length() - 1, 0)
         elif link.point2.is_matrix_2 and link.point2.is_out:
             # output from matrix 2 connected to matrix 1
             # switch point2 to be an input
             m2 = output_to_input(m2, link.point2.index)
             removed_points.append(deepcopy(link.point2))
             link.point2.is_out = False
-            link.point2.index = -1  # TODO index problem here and in similar places perhaps ...
+            m2_width = EnhancedInt(m2.shape[1])
+            link.point2.index = max((m2_width - 1).bit_length() - 1, 0)
         elif link.point1.is_matrix_2 and link.point1.is_out:
             # output from matrix 2 connected to matrix 1
             # switch point1 to be an input
             m2 = output_to_input(m2, link.point1.index)
             removed_points.append(deepcopy(link.point1))
             link.point1.is_out = False
-            link.point1.index = -1
+            m2_width = m2.shape[1]
+            link.point1.index = max((m2_width - 1).bit_length() - 1, 0)
         # move the indexes of the other points to the correct new positions
         if link.point1 in removed_points and link.point2 in removed_points:
             del links[iteration_index]
@@ -96,7 +100,7 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
         if link.point1.index == -1:
             if not link.point1.is_matrix_2:
                 if not link.point1.is_out:
-                    link.point1.index = EnhancedInt.from_list(m1.shape[1]).bit_length() - 1
+                    link.point1.index = EnhancedInt.from_list(m1.shape[1]).bit_length() - 1  # TODO WTF have I done here
                 else:
                     link.point1.index = EnhancedInt.from_list(m1.shape[0]).bit_length() - 1
             else:
@@ -148,40 +152,40 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
                                    else _link.point2.index)
     covering = len(m1_m2_links)
 
-    inputs_m1 = [input_point for input_point in inputs if not input_point.is_matrix_2]
-    inputs_m1_sorted = sorted(inputs_m1, key=lambda input_m1: input_m1.index)
+    m1_inputs = [input_point for input_point in inputs if not input_point.is_matrix_2]
+    m1_inputs_sorted = sorted(m1_inputs, key=lambda input_m1: input_m1.index)
 
-    outputs_m1_to_m2 = [link.point1 if link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
-    outputs_m1_to_output = [output_point for output_point in outputs if not output_point.is_matrix_2]
+    m1_outputs_to_m2 = [link.point1 if link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
+    m1_outputs_to_output = [output_point for output_point in outputs if not output_point.is_matrix_2]
 
-    outputs_m1 = outputs_m1_to_output + outputs_m1_to_m2
+    outputs_m1 = m1_outputs_to_output + m1_outputs_to_m2
     outputs_m1_sorted = sorted(outputs_m1, key=lambda output_m1: output_m1.index)
 
     # order m1
-    m1_ordered = order_matrix(m1, inputs_m1, inputs_m1_sorted, outputs_m1_sorted, outputs_m1)
+    m1_ordered = order_matrix(m1, m1_inputs, m1_inputs_sorted, outputs_m1_sorted, outputs_m1)
 
     # prepare lists to reorder m2
-    inputs_m2_from_inputs = [input_point for input_point in inputs if input_point.is_matrix_2]
-    inputs_m2_from_m1 = [link.point1 if not link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
+    m2_inputs_from_inputs = [input_point for input_point in inputs if input_point.is_matrix_2]
+    m2_inputs_from_m1 = [link.point1 if not link.point1.is_matrix_2 else link.point2 for link in m1_m2_links_m1_sorted]
 
-    inputs_m2 = inputs_m2_from_m1 + inputs_m2_from_inputs
-    inputs_m2_sorted = sorted(inputs_m2, key=lambda input_m2: input_m2.index)
+    m2_inputs = m2_inputs_from_m1 + m2_inputs_from_inputs
+    m2_inputs_sorted = sorted(m2_inputs, key=lambda input_m2: input_m2.index)
 
-    outputs_m2 = [output_point for output_point in outputs if output_point.is_matrix_2]
-    outputs_m2_sorted = sorted(outputs_m2, key=lambda output_m2: output_m2.index)
+    m2_outputs = [output_point for output_point in outputs if output_point.is_matrix_2]
+    m2_outputs_sorted = sorted(m2_outputs, key=lambda output_m2: output_m2.index)
 
     # order m2
-    m2_ordered = order_matrix(m2, inputs_m2, inputs_m2_sorted, outputs_m2, outputs_m2_sorted)
+    m2_ordered = order_matrix(m2, m2_inputs, m2_inputs_sorted, m2_outputs, m2_outputs_sorted)
 
     # reunite the matrices
     result = twisted_multiplication(m1_ordered, m2_ordered, covering)
 
     # prepare lists to reorder the result
-    inputs_m2_from_inputs_sorted = sorted(inputs_m2_from_inputs, key=lambda input_m2: input_m2.index)
-    group_inputs = inputs_m1_sorted + inputs_m2_from_inputs_sorted
+    m2_inputs_from_inputs_sorted = sorted(m2_inputs_from_inputs, key=lambda input_m2: input_m2.index)
+    group_inputs = m1_inputs_sorted + m2_inputs_from_inputs_sorted
 
-    outputs_m1_to_output_sorted = sorted(outputs_m1_to_output, key=lambda output_m1: output_m1.index)
-    group_outputs = outputs_m1_to_output_sorted + outputs_m2_sorted
+    m1_outputs_to_output_sorted = sorted(m1_outputs_to_output, key=lambda output_m1: output_m1.index)
+    group_outputs = m1_outputs_to_output_sorted + m2_outputs_sorted
 
     # order result
     result_ordered = order_matrix(result, inputs, group_inputs, outputs, group_outputs)
