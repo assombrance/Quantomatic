@@ -1,4 +1,7 @@
-# from __future__ import annotations
+# coding=UTF-8
+"""
+Module focused on setting up the various data format needed.
+"""
 import inspect
 import math
 from copy import deepcopy
@@ -8,6 +11,9 @@ import numpy as np
 
 
 class PrettyStr:
+    """
+    Utility class redefining the string cast be be readable (returning all the attributes in the string)
+    """
     def __str__(self) -> str:
         string = "<" + self.__class__.__name__ + ": "
         for atr in sorted(self.__dict__):
@@ -17,6 +23,10 @@ class PrettyStr:
 
 
 class AtrComparison:
+    """
+    Utility class redefining the __eq__ and the __hash__ magic methods so classes implementing this class are have their
+    attributes compared instead of their identity (this would have been done using their id)
+    """
     def __eq__(self, other):
         if isinstance(self, other.__class__):
             return self.__dict__ == other.__dict__
@@ -27,11 +37,29 @@ class AtrComparison:
 
 
 class Wire(PrettyStr, AtrComparison):
+    """
+    Used in the graph form representation.
+    A wire is initially an input or an output of the graph (the name comes from the current name used in Quantomatic).
+    In our implementation, a wire can also be a node for technical reasons.
+
+    Attributes:
+        name (str): name of the wire
+    """
     def __init__(self, name: str) -> None:
         self.name = name
 
 
 class Node(Wire):
+    """
+    Used in the graph form representation.
+    A Node is inside the graph, it inherits from wire so the edge can link either two wires together, a wire and a node
+    or two nodes together.
+
+    Attributes:
+        angle (float): angle of the node
+        arity (int): arity of the node
+        node_type (str): type of the node. As of now *(V2.0)*, the node types implemented are *X*, *Z* and *hadamard*
+    """
     def __init__(self, name: str, angle: float = 0., node_type: str = 'Z', arity: int = 0) -> None:
         super().__init__(name)
         self.angle = angle
@@ -40,6 +68,16 @@ class Node(Wire):
 
 
 class Edge(PrettyStr, AtrComparison):
+    """
+    Used in the graph form representation.
+    An edge links two wires together.
+
+    Attributes:
+        name (str): name of the edge
+        n1 (Wire): first wire of the edge
+        n2 (Wire): second wire of the edge
+        label (str): label of the edge
+    """
     def __init__(self, name: str, n1: Wire, n2: Wire, label: str = "") -> None:
         self.name = name
         self.n1 = n1
@@ -47,24 +85,58 @@ class Edge(PrettyStr, AtrComparison):
         self.label = label
 
     def __iter__(self):
+        """
+        This special method is used to make the edge iterable, this way, it is easier to access both wires at the same
+        time.
+
+        Yields:
+            The next wire (between the two wires of the edge).
+        """
         yield self.n1
         yield self.n2
 
 
 class ConnectionPoint(PrettyStr, AtrComparison):
-    def __init__(self, is_matrix_2=False, is_out=False, index=0) -> None:
+    """
+    Used in the matrix form representation.
+    In this software, at one level of iteration given, only two matrices are considered. This class describes a point of
+    one of those two matrices, it is a combination of :
+
+    Attributes:
+        is_matrix_2 (bool): if false, the point is on the first matrix, otherwise, it is on the second one. This
+            paradigm has been chosen because of the falsy value of 0 (assigning this parameter to 0 would mean the
+            connection point would be on the first matrix and assigning it to one would be on the second matrix)
+        is_out (bool): if false, is an input, otherwise is an output. This choice has been lead by the same reasoning as
+            for the is_matrix_2 attribute.
+        index (int): index of the edge connection. Beware : this index is not between 0 and the size of the matrix in
+            the related direction but between 0 and the bit length of this same size.
+    """
+    def __init__(self, is_matrix_2: bool=False, is_out: bool=False, index: int=0) -> None:
         self.is_matrix_2 = is_matrix_2
         self.is_out = is_out
         self.index = index
 
 
 class InterMatrixLink(PrettyStr, AtrComparison):
+    """
+    Used in the matrix form representation.
+    An InterMatrixLink links two ConnectionPoints. Those do not have to be on different matrices, or even on different
+    sides of a matrix.
+
+    Attributes:
+        point1 (ConnectionPoint): first connection point
+        point2 (ConnectionPoint): second connection point
+    """
     def __init__(self, point1: ConnectionPoint, point2: ConnectionPoint) -> None:
         self.point1 = point1
         self.point2 = point2
 
 
 class AbstractMatrix(AtrComparison, np.matrix):
+    """
+    Alternative to numpy matrix in the algorithm, this class is entirely abstract (it cannot be constructed) and
+    specifies all the methods needed to implement a new kind of matrix.
+    """
     def __init__(self, *args, **kwargs) -> None:
         super().__init__()
         son = kwargs.get("son")
@@ -100,6 +172,17 @@ class AbstractMatrix(AtrComparison, np.matrix):
 
     @classmethod
     def node_to_matrix(cls, node: Node, in_number: int, out_number: int):
+        """
+        Converts a node to a matrix in the correct fragment.
+
+        Args:
+            node(Node): the node to be converted
+            in_number (int): number of inputs to the node
+            out_number (int): number of outputs to the node
+
+        Returns:
+            GenericMatrix: The matrix corresponding to the node.
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (cls.__name__, inspect.stack()[0][3]))
 
@@ -114,6 +197,24 @@ class AbstractMatrix(AtrComparison, np.matrix):
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     def tensor_product(self, b):
+        """
+        Basic tensor product of *self* and *b*.
+
+        Examples:
+            A.tensor_product(B)=
+
+            ========  =====  =======
+            A(0,0)*B  False  False
+              ...     False  False
+            A(-1,0)*B     True   False
+            ========  =====  =======
+
+        Args:
+            b:
+
+        Returns:
+
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -256,9 +357,15 @@ class Pi4Matrix(AbstractMatrix):
             base = np.ones((1 << out_number, 1 << in_number))
             base[-1, -1] = -1
             null_base = np.zeros((1 << out_number, 1 << in_number))
-            result = Pi4Matrix(null_base, base, null_base, base, 1)
+            result = Pi4Matrix(null_base, base, null_base, -base, 1)
+        elif node.node_type == 'not-triangle':
+            if in_number + out_number != 2:
+                raise ValueError('Hadamard gate is only known for node with an arity of 2')
+            result = Pi4Matrix([[1, 1], [1, 0]])
         elif node.node_type == 'Z' or node.node_type == 'X':
             position = node.angle * fragment
+            while position < 0:
+                position += 2*fragment
             if position in np.arange(2*fragment):
                 null_base = np.zeros((1 << out_number, 1 << in_number))
                 base = deepcopy(null_base)
@@ -269,7 +376,7 @@ class Pi4Matrix(AbstractMatrix):
                 if position < fragment:
                     matrices[int(position)][-1, -1] = 1
                 else:
-                    matrices[int(position)][-1, -1] = -1
+                    matrices[int(position) - fragment][-1, -1] = -1
                 result = Pi4Matrix(matrices[0], matrices[1], matrices[2], matrices[3], 0)
             else:
                 raise ValueError('You are trying to create a Pi4Matrix from a node with an angle which is not a '
@@ -291,22 +398,22 @@ class Pi4Matrix(AbstractMatrix):
         for i in np.arange(height):
             for j in np.arange(width):
                 x = EnhancedInt(abs(self.m0[i, j]))
-                if x.index(1) > 0:
+                if x.index(1) >= 0:
                     non_zero_coefficient_found = True
                     if x.index(1) < smallest_2_power:
                         smallest_2_power = x.index(1)
                 x = EnhancedInt(abs(self.m1[i, j]))
-                if x.index(1) > 0:
+                if x.index(1) >= 0:
                     non_zero_coefficient_found = True
                     if x.index(1) < smallest_2_power:
                         smallest_2_power = x.index(1)
                 x = EnhancedInt(abs(self.m2[i, j]))
-                if x.index(1) > 0:
+                if x.index(1) >= 0:
                     non_zero_coefficient_found = True
                     if x.index(1) < smallest_2_power:
                         smallest_2_power = x.index(1)
                 x = EnhancedInt(abs(self.m3[i, j]))
-                if x.index(1) > 0:
+                if x.index(1) >= 0:
                     non_zero_coefficient_found = True
                     if x.index(1) < smallest_2_power:
                         smallest_2_power = x.index(1)

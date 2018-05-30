@@ -19,12 +19,12 @@ sys.path.insert(0, "../../src")
 
 # -- Project information -----------------------------------------------------
 
-project = 'algo1'
+project = 'quanto-matrix'
 copyright = '2018, Henri de Boutray'
 author = 'Henri de Boutray'
 
 # The short X.Y version
-version = ''
+version = '2.0'
 # The full version, including alpha/beta/rc tags
 release = ''
 
@@ -45,6 +45,10 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon'
 ]
+
+# Napoleon settings
+napoleon_include_private_with_doc = True
+napoleon_include_special_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.']
@@ -113,7 +117,7 @@ html_context = {
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'algo1doc'
+htmlhelp_basename = 'quantomatrixdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -140,7 +144,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'algo1.tex', 'algo1 Documentation',
+    (master_doc, 'quanto-matrix.tex', 'Quanto-matrix Documentation',
      'Henri de Boutray', 'manual'),
 ]
 
@@ -150,7 +154,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'algo1', 'algo1 Documentation',
+    (master_doc, 'quanto-matrix', 'Quanto-matrix Documentation',
      [author], 1)
 ]
 
@@ -161,8 +165,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'algo1', 'algo1 Documentation',
-     author, 'algo1', 'One line description of project.',
+    (master_doc, 'quanto-matrix', 'Quanto-matrix Documentation',
+     author, 'Henri de Boutray', 'One line description of project.',
      'Miscellaneous'),
 ]
 

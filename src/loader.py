@@ -1,13 +1,19 @@
+# coding=UTF-8
+"""
+Module focused on setting up the data to feed it to q_functions
+"""
 import json
 
 from typing import List
 
 import q_functions as qf
-from data import Edge, Wire, Node
+from data import Edge, Wire, Node, GenericMatrix
 
 
-def main(diagram_file_path: str, inputs: List[str], outputs: List[str]):
-    """Computes the diagram matrix from the diagram given, the diagram inputs are precises separately (once integrated
+def main(diagram_file_path: str, inputs: List[str], outputs: List[str]) -> (bool, List[str], List[str], GenericMatrix):
+    """main(diagram_file_path: str, inputs: List[str], outputs: List[str]) -> bool, List[str], List[str], GenericMatrix
+
+    Computes the diagram matrix from the diagram given, the diagram inputs are precises separately (once integrated
     in Quantomatic, the inputs are asked to the user via a dialogue box)
 
     Args:
@@ -26,27 +32,23 @@ def main(diagram_file_path: str, inputs: List[str], outputs: List[str]):
     end_wires = i_o_to_data(outputs, wires)
 
     m = qf.split_and_reunite(nodes, edges, start_wires, end_wires)
-    # print('____wires____')
-    # for wire in wires:
-    #     print(wire)
-    # print('____start_wires____')
-    # for wire in start_wires:
-    #     print(wire)
-    # print('____end_wires____')
-    # for wire in end_wires:
-    #     print(wire)
-    # print('____edges____')
-    # for edge in edges:
-    #     print(edge)
-    # print('____nodes____')
-    # for node in nodes:
-    #     print(node)
     return assumed_order, inputs, outputs, m
 
 
-def check_for_doubles(_inputs, _outputs):
-    in_out = _inputs + _outputs
-    difference = qf.symmetric_difference(_inputs, _outputs)
+def check_for_doubles(inputs: list, outputs: list) -> None:
+    """check_for_doubles(inputs: list, outputs: list) -> None
+
+    Raise an error if an element is both in the *inputs* and the *outputs*
+
+    Args:
+        inputs (list): diagram inputs
+        outputs (list): diagram outputs
+
+    Returns:
+        None
+    """
+    in_out = inputs + outputs
+    difference = qf.symmetric_difference(inputs, outputs)
     double = qf.symmetric_difference(in_out, difference)
     double_simplified = []
     i = 0
@@ -58,7 +60,17 @@ def check_for_doubles(_inputs, _outputs):
         raise NameError('Common node in Inputs and Outputs : ' + str(double_simplified))
 
 
-def load_dictionaries(diagram_file_path):
+def load_dictionaries(diagram_file_path: str) -> (dict, dict, dict):
+    """load_dictionaries(diagram_file_path: str) -> dict, dict, dict
+
+    Loads the three dictionaries (wires, nodes and edges) from the file containing the graph
+
+    Args:
+        diagram_file_path (str): absolute or relative path to the *.qgraph* file
+
+    Returns:
+        dict, dict, dict: dictionaries for the wires, nodes and edges
+    """
     file = open(diagram_file_path)
     content_string = file.read()
     diagram_dictionary = json.loads(content_string)
@@ -78,6 +90,16 @@ def load_dictionaries(diagram_file_path):
 
 
 def interpret_i_o(raw_io: List[str]) -> (List[str], List[str]):
+    """interpret_i_o(raw_io: List[str]) -> List[str], List[str]
+
+    Takes in the args from the main command and returns a list of inputs name and a list of outputs name
+
+    Args:
+        raw_io (List[str]): arg list from the command invoking main.py
+
+    Returns:
+        List[str], List[str]: list of inputs name and outputs name
+    """
     if len(raw_io) < 2:
         raise ValueError("Bad argument list")
     raw_inputs = ""
@@ -99,12 +121,23 @@ def interpret_i_o(raw_io: List[str]) -> (List[str], List[str]):
 
 
 def i_o_to_data(i_o_list: List[str], wires: List[Wire]) -> List[Wire]:
+    """i_o_to_data(i_o_list: List[str], wires: List[Wire]) -> List[Wire]
+
+    Used to create the ordered list of input and output wires from the input and output names as well as the wires.
+
+    Args:
+        i_o_list (List[str]): ordered list of wire names
+        wires (List[Wire]): list of all the wires in the graph
+
+    Returns:
+        List[Wire]: list of wire ordered
+    """
     i_o_wires = []
     for i_o_name in i_o_list:
         found = False
         for wire in wires:
             if wire.name == i_o_name:
-                i_o_wires .append(wire)
+                i_o_wires.append(wire)
                 found = True
                 break
         if not found:
@@ -112,8 +145,11 @@ def i_o_to_data(i_o_list: List[str], wires: List[Wire]) -> List[Wire]:
     return i_o_wires
 
 
-def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str], outputs_order_list: List[str]):
-    """Looks for unlisted inputs and outputs, in case some are found, if listed as input or output in the file, add them
+def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str],
+               outputs_order_list: List[str]) -> (bool, List[str], List[str]):
+    """manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str], outputs_order_list: List[str]) -> bool, List[str], List[str]
+
+    Looks for unlisted inputs and outputs, in case some are found, if listed as input or output in the file, add them
     otherwise, raise an error.
 
     Args:
@@ -123,7 +159,7 @@ def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str
         outputs_order_list (list[string]): user output list
 
     Returns:
-        bool, list, list
+        bool, List[str], List[str]: did the I/O change ? updated list of inputs and outputs
     """
     assumed_order = False
     for wire in wires:
@@ -141,7 +177,20 @@ def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str
     return assumed_order, inputs_order_list, outputs_order_list
 
 
-def dictionary_to_data(wire_vertices_dictionary: dict, node_vertices_dictionary: dict, undir_edges_dictionary: dict):
+def dictionary_to_data(wire_vertices_dictionary: dict, node_vertices_dictionary: dict,
+                       undir_edges_dictionary: dict) -> (List[Wire], List[Node], List[Edge]):
+    """dictionary_to_data(wire_vertices_dictionary: dict, node_vertices_dictionary: dict, undir_edges_dictionary: dict) -> List[Wire], List[Node], List[Edge]
+
+    Converts the three dictionaries (wires, nodes and edges) to lists of classes defined in :ref:`data`
+
+    Args:
+        wire_vertices_dictionary (dict): dictionary containing the data about the wires
+        node_vertices_dictionary (dict): dictionary containing the data about the nodes
+        undir_edges_dictionary (dict): dictionary containing the data about the edges
+
+    Returns:
+        List[Wire], List[Node], List[Edge]: lists of wires, nodes and edges
+    """
     wires = []  # type: List[Wire]
     for wire_name in wire_vertices_dictionary:
         wires.append(Wire(wire_name))

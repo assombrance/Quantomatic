@@ -1,3 +1,8 @@
+# coding=UTF-8
+"""
+Module focused on the fusion_matrices, taking two diagram's matrices, with those diagrams linked by edges, and computing
+the resulting matrix.
+"""
 from typing import List
 from copy import deepcopy
 
@@ -8,7 +13,9 @@ from data import GenericMatrix, ConnectionPoint, InterMatrixLink, EnhancedInt, U
 
 def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[ConnectionPoint],
                     outputs: List[ConnectionPoint], links: List[InterMatrixLink]) -> GenericMatrix:
-    """ Main component of the V2 of the algorithm uses clever algorithms to lower the complexity.
+    """ .. _fusion_matrices:
+
+    Main component of the V2 of the algorithm uses clever algorithms to lower the complexity.
     The two matrices are in sequence, but don't have to be fully connected (or at all, in that case we fall back in the
     tensor product case)
 
@@ -100,14 +107,14 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
         if link.point1.index == -1:
             if not link.point1.is_matrix_2:
                 if not link.point1.is_out:
-                    link.point1.index = EnhancedInt.from_list(m1.shape[1]).bit_length() - 1  # TODO WTF have I done here
+                    link.point1.index = max(EnhancedInt(m1.shape[1] - 1).bit_length() - 1, 0)
                 else:
-                    link.point1.index = EnhancedInt.from_list(m1.shape[0]).bit_length() - 1
+                    link.point1.index = max(EnhancedInt(m1.shape[0] - 1).bit_length() - 1, 0)
             else:
                 if not link.point1.is_out:
-                    link.point1.index = EnhancedInt.from_list(m2.shape[1]).bit_length() - 1
+                    link.point1.index = max(EnhancedInt(m2.shape[1] - 1).bit_length() - 1, 0)
                 else:
-                    link.point1.index = EnhancedInt.from_list(m2.shape[0]).bit_length() - 1
+                    link.point1.index = max(EnhancedInt(m2.shape[0] - 1).bit_length() - 1, 0)
         for removed_point in removed_points:
             for link in links:
                 if link.point1.is_matrix_2 == removed_point.is_matrix_2 and link.point1.is_out == removed_point.is_out \
@@ -176,6 +183,7 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
 
     # order m2
     m2_ordered = order_matrix(m2, m2_inputs, m2_inputs_sorted, m2_outputs, m2_outputs_sorted)
+    # fixme not gud but problem before (m2 inputs broken)
 
     # reunite the matrices
     result = twisted_multiplication(m1_ordered, m2_ordered, covering)
@@ -194,6 +202,16 @@ def fusion_matrices(m1: GenericMatrix, m2: GenericMatrix, inputs: List[Connectio
 
 
 def remove_cup(m: GenericMatrix, index1: int, index2: int) -> GenericMatrix:
+    """
+
+    Args:
+        m:
+        index1:
+        index2:
+
+    Returns:
+
+    """
     height = m.shape[0]
     base_size = height.bit_length()
     if index1 not in np.arange(base_size):
