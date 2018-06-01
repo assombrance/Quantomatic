@@ -2,6 +2,10 @@
 """
 Module focused on the fusion_matrices, taking two diagram's matrices, with those diagrams linked by edges, and computing
 the resulting matrix.
+
+This module contains non trivial calculations. If some of them are unclear, you can find documentation on the subject on
+the GitHub project, in the
+`"calculs-prealables.pdf" <https://github.com/assombrance/Quantomatic/blob/master/calculs-prealables.pdf>`_ document.
 """
 from typing import List
 from copy import deepcopy
@@ -339,7 +343,7 @@ def input_to_output(m: GenericMatrix, input_index: int, output_index: int = -1) 
 
 
 def output_to_input(m: GenericMatrix, output_index: int, input_index: int = -1) -> GenericMatrix:
-    """Transforms *m* to have the output connected to *output_index* becoming an input connected to to *intput_index*.
+    """Transforms *m* to have the output connected to *output_index* becoming an input connected to to *input_index*.
 
     Args:
         m (GenericMatrix): matrix to transform
