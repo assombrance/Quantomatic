@@ -53,7 +53,7 @@ def check_for_doubles(inputs: list, outputs: list) -> None:
     double_simplified = []
     i = 0
     for wire in double:
-        i = i + 1
+        i += 1
         if i % 2:
             double_simplified.append(wire)
     if double_simplified:
@@ -166,10 +166,10 @@ def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str
         if wire.name not in inputs_order_list + outputs_order_list:
             for edge in edges:
                 if edge.n1 == wire or edge.n2 == wire:
-                    if 'input' in edge.label:
+                    if 'input' in edge.label or 'in' in edge.label or 'i' in edge.label:
                         inputs_order_list.append(wire.name)
                         assumed_order = True
-                    elif 'output' in edge.label:
+                    elif 'output' in edge.label or 'out' in edge.label or 'o' in edge.label:
                         outputs_order_list.append(wire.name)
                         assumed_order = True
                     else:

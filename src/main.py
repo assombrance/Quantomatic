@@ -30,14 +30,12 @@ if __name__ == '__main__':
 
     loader.check_for_doubles(inputList, outputList)
 
-    # tmp
-    for _ in np.arange(5):
-        assumed_order_e, inputList, outputList, matrix = loader.main(sys.argv[1], inputList, outputList)
+    assumed_order_e, inputList, outputList, matrix = loader.main(sys.argv[1], inputList, outputList)
 
-        if assumed_order_e:
-            print('Caution, not all wires given explicitly as input or output, assuming following order:')
-            print('Inputs: ' + str(inputList))
-            print('Outputs: ' + str(outputList))
-        print('_______________')
-        matrix.normalize()
-        print(matrix)
+    if assumed_order_e:
+        print('Caution, not all wires given explicitly as input or output, assuming following order:')
+        print('Inputs: ' + str(inputList))
+        print('Outputs: ' + str(outputList))
+    print('_______________')
+    matrix.normalize()
+    print(matrix)
