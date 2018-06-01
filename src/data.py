@@ -1,6 +1,6 @@
 # coding=UTF-8
 """
-Module focused on setting up the various data format needed.
+Module focused on setting up the various data format needed. test
 """
 import inspect
 import math
@@ -153,6 +153,31 @@ class AbstractMatrix(AtrComparison, np.matrix):
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     def dot(self, b, out=None):
+        """
+        a.dot(b, out=None)
+
+            Dot product of two arrays.
+
+            Refer to `numpy.dot` for full documentation.
+
+            See Also
+            --------
+            numpy.dot : equivalent function
+
+            Examples
+            --------
+            >>> a = np.eye(2)
+            >>> b = np.ones((2, 2)) * 2
+            >>> a.dot(b)
+            array([[ 2.,  2.],
+                   [ 2.,  2.]])
+
+            This array method can be conveniently chained:
+
+            >>> a.dot(b).dot(b)
+            array([[ 8.,  8.],
+                   [ 8.,  8.]])
+        """
         if isinstance(self, b.__class__):
             raise NotImplementedError("Class %s doesn't implement %s()" %
                                       (self.__class__.__name__, inspect.stack()[0][3]))
@@ -171,7 +196,7 @@ class AbstractMatrix(AtrComparison, np.matrix):
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     @classmethod
-    def node_to_matrix(cls, node: Node, in_number: int, out_number: int):
+    def node_to_matrix(cls, node: Node, in_number: int, out_number: int) -> 'GenericMatrix':
         """
         Converts a node to a matrix in the correct fragment.
 
@@ -188,37 +213,55 @@ class AbstractMatrix(AtrComparison, np.matrix):
 
     @property
     def shape(self):
+        """Returns the shape of the matrix
+
+        Returns:
+            (int,int): Shape of the matrix
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     @property
     def size(self):
+        """Returns the size of the matrix
+
+        Returns:
+            int: Size of the matrix
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
-    def tensor_product(self, b):
+    def tensor_product(self, b) -> 'GenericMatrix':
         """
         Basic tensor product of *self* and *b*.
 
         Examples:
             A.tensor_product(B)=
 
-            ========  =====  =======
-            A(0,0)*B  False  False
-              ...     False  False
-            A(-1,0)*B     True   False
-            ========  =====  =======
+            =========  =====  ==========
+            A(0,0)*B   ...    A(0,-1)*B
+              ...               ...
+            A(-1,0)*B  ...    A(-1,-1)*B
+            =========  =====  ==========
 
         Args:
-            b:
+            b (GenericMatrix): matrix to be multiplied (in the tensor way) to *self*
 
         Returns:
-
+            GenericMatrix: tensor product of *self* and *b*
         """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
-    def tensor_power(self, power: int):
+    def tensor_power(self, power: int) -> 'GenericMatrix':
+        """*power*th power of *self* in the tensor way (understand use tensor product instead of classical product)
+
+        Args:
+            power (int): power to be elevated to
+
+        Returns:
+            GenericMatrix: the computed power
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -271,14 +314,89 @@ class AbstractMatrix(AtrComparison, np.matrix):
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     def any(self, axis=None, out=None):
+        """
+        Test whether any array element along a given axis evaluates to True.
+
+        Refer to `numpy.any` for full documentation.
+
+        Parameters
+        ----------
+        axis : int, optional
+            Axis along which logical OR is performed
+        out : ndarray, optional
+            Output to existing array instead of creating new one, must have
+            same shape as expected output
+
+        Returns
+        -------
+            any : bool, ndarray
+                Returns a single bool if `axis` is ``None``; otherwise,
+                returns `ndarray`
+
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     def all(self, axis=None, out=None):
+        """
+        Test whether all matrix elements along a given axis evaluate to True.
+
+        Parameters
+        ----------
+        See `numpy.all` for complete descriptions
+
+        See Also
+        --------
+        numpy.all
+
+        Notes
+        -----
+        This is the same as `ndarray.all`, but it returns a `matrix` object.
+
+        Examples
+        --------
+        >>> x = np.matrix(np.arange(12).reshape((3,4))); x
+        matrix([[ 0,  1,  2,  3],
+                [ 4,  5,  6,  7],
+                [ 8,  9, 10, 11]])
+        >>> y = x[0]; y
+        matrix([[0, 1, 2, 3]])
+        >>> (x == y)
+        matrix([[ True,  True,  True,  True],
+                [False, False, False, False],
+                [False, False, False, False]])
+        >>> (x == y).all()
+        False
+        >>> (x == y).all(0)
+        matrix([[False, False, False, False]])
+        >>> (x == y).all(1)
+        matrix([[ True],
+                [False],
+                [False]])
+
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
     def reshape(self, shape, *shapes, order='C'):
+        """
+        a.reshape(shape, order='C')
+
+            Returns an array containing the same data with a new shape.
+
+            Refer to `numpy.reshape` for full documentation.
+
+            See Also
+            --------
+            numpy.reshape : equivalent function
+
+            Notes
+            -----
+            Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+            the elements of the shape parameter to be passed in as separate arguments.
+            For example, ``a.reshape(10, 11)`` is equivalent to
+            ``a.reshape((10, 11))``.
+        """
         raise NotImplementedError("Class %s doesn't implement %s()" %
                                   (self.__class__.__name__, inspect.stack()[0][3]))
 
@@ -304,6 +422,11 @@ class AbstractMatrix(AtrComparison, np.matrix):
 
 
 class Pi4Matrix(AbstractMatrix):
+    """
+    Implementation of AbstractMatrix, in the pi/4 fragment.
+    In this fragment, a matrix is represented by 4 matrices, multiplied respectively by exp(k\*i\*pi) with k from 0 to 4
+    A power of 2 is also used to avoid (a little bit) number from exploding.
+    """
     def __new__(cls, m0, m1=None, m2=None, m3=None, z: int = 0):
         if isinstance(m0, Pi4Matrix):
             return m0
@@ -338,14 +461,34 @@ class Pi4Matrix(AbstractMatrix):
 
     @property
     def shape(self):
+        """Returns the shape of the matrix
+
+        Returns:
+            (int,int): Shape of the matrix
+        """
         return self.m0.shape
 
     @property
     def size(self):
+        """Returns the size of the matrix
+
+        Returns:
+            int: Size of the matrix
+        """
         return self.m0.size
 
     @classmethod
-    def node_to_matrix(cls, node: Node, in_number: int, out_number: int):
+    def node_to_matrix(cls, node: Node, in_number: int, out_number: int) -> 'Pi4Matrix':
+        """Returns the matrix in the Pi4 fragment corresponding to the semantic of the given *node*.
+
+        Args:
+            node(Node): the node to be converted
+            in_number (int): number of inputs to the node
+            out_number (int): number of outputs to the node
+
+        Returns:
+
+        """
         # classic_hadamard = 1/2( [[1, 1], [1, -1]]*exp(i*pi/4) + [[-1, -1], [-1, 1]]*exp(3i*pi/4) )
         # comes from the fact that exp(i*pi/4)-exp(3i*pi/4)=sqrt(2)
         fragment = 4
@@ -361,7 +504,8 @@ class Pi4Matrix(AbstractMatrix):
         elif node.node_type == 'not-triangle':
             if in_number + out_number != 2:
                 raise ValueError('Hadamard gate is only known for node with an arity of 2')
-            result = Pi4Matrix([[1, 1], [1, 0]])
+            result = Pi4Matrix(np.ones((1 << out_number, 1 << in_number)))
+            result[-1, -1] = Pi4Matrix(0)
         elif node.node_type == 'Z' or node.node_type == 'X':
             position = node.angle * fragment
             while position < 0:
@@ -392,6 +536,12 @@ class Pi4Matrix(AbstractMatrix):
         return result
 
     def normalize(self):
+        """To have a unique representation for a matrix described by Pi4Matrix, the dividing 2's power must be as great
+        as possible.
+
+        To achieve this, this methods ensure that at least one coefficient of one of the matrices is odd, and increase
+        the 2's power accordingly.
+        """
         smallest_2_power = 32
         non_zero_coefficient_found = False
         height, width = self.shape
@@ -475,6 +625,31 @@ class Pi4Matrix(AbstractMatrix):
         return result
 
     def dot(self, b, out=None) -> 'Pi4Matrix':
+        """
+        a.dot(b, out=None)
+
+            Dot product of two arrays.
+
+            Refer to `numpy.dot` for full documentation.
+
+            See Also
+            --------
+            numpy.dot : equivalent function
+
+            Examples
+            --------
+            >>> a = np.eye(2)
+            >>> b = np.ones((2, 2)) * 2
+            >>> a.dot(b)
+            array([[ 2.,  2.],
+                   [ 2.,  2.]])
+
+            This array method can be conveniently chained:
+
+            >>> a.dot(b).dot(b)
+            array([[ 8.,  8.],
+                   [ 8.,  8.]])
+        """
         _pi_4_b = Pi4Matrix(b)
         if _pi_4_b.shape[0] == self.shape[1]:
             _z = _pi_4_b.z + self.z
@@ -710,16 +885,91 @@ class Pi4Matrix(AbstractMatrix):
         return self
 
     def any(self, axis=None, out=None):
+        """
+        Test whether any array element along a given axis evaluates to True.
+
+        Refer to `numpy.any` for full documentation.
+
+        Parameters
+        ----------
+        axis : int, optional
+            Axis along which logical OR is performed
+        out : ndarray, optional
+            Output to existing array instead of creating new one, must have
+            same shape as expected output
+
+        Returns
+        -------
+            any : bool, ndarray
+                Returns a single bool if `axis` is ``None``; otherwise,
+                returns `ndarray`
+
+        """
         return self.m0.any(axis, out) or self.m1.any(axis, out) or self.m2.any(axis, out) or self.m3.any(axis, out)
 
     def all(self, axis=None, out=None):
+        """
+        Test whether all matrix elements along a given axis evaluate to True.
+
+        Parameters
+        ----------
+        See `numpy.all` for complete descriptions
+
+        See Also
+        --------
+        numpy.all
+
+        Notes
+        -----
+        This is the same as `ndarray.all`, but it returns a `matrix` object.
+
+        Examples
+        --------
+        >>> x = np.matrix(np.arange(12).reshape((3,4))); x
+        matrix([[ 0,  1,  2,  3],
+                [ 4,  5,  6,  7],
+                [ 8,  9, 10, 11]])
+        >>> y = x[0]; y
+        matrix([[0, 1, 2, 3]])
+        >>> (x == y)
+        matrix([[ True,  True,  True,  True],
+                [False, False, False, False],
+                [False, False, False, False]])
+        >>> (x == y).all()
+        False
+        >>> (x == y).all(0)
+        matrix([[False, False, False, False]])
+        >>> (x == y).all(1)
+        matrix([[ True],
+                [False],
+                [False]])
+
+        """
         return self.m0.any(axis, out) and self.m1.any(axis, out) and self.m2.any(axis, out) and self.m3.any(axis, out)
 
     def reshape(self, shape, *shapes, order='C'):
-        _m0 = self.m0.reshape(shape, *shapes, order)
-        _m1 = self.m1.reshape(shape, *shapes, order)
-        _m2 = self.m2.reshape(shape, *shapes, order)
-        _m3 = self.m3.reshape(shape, *shapes, order)
+        """
+        a.reshape(shape, order='C')
+
+            Returns an array containing the same data with a new shape.
+
+            Refer to `numpy.reshape` for full documentation.
+
+            See Also
+            --------
+            numpy.reshape : equivalent function
+
+            Notes
+            -----
+            Unlike the free function `numpy.reshape`, this method on `ndarray` allows
+            the elements of the shape parameter to be passed in as separate arguments.
+            For example, ``a.reshape(10, 11)`` is equivalent to
+            ``a.reshape((10, 11))``.
+        """
+        _m0 = self.m0.reshape(shape, *shapes)
+        _m1 = self.m1.reshape(shape, *shapes)
+        _m2 = self.m2.reshape(shape, *shapes)
+        _m3 = self.m3.reshape(shape, *shapes)
         return Pi4Matrix(_m0, _m1, _m2, _m3, self.z)
 
     def __neg__(self, *args, **kwargs):
@@ -738,11 +988,8 @@ class Pi4Matrix(AbstractMatrix):
         """Set *self[key]* to *value*
 
         Args:
-            key:
-            value (Pi4Matrix):
-
-        Returns:
-            None
+            key: key to set
+            value (Pi4Matrix): value to set
         """
         if not isinstance(value, Pi4Matrix):
             return ValueError("Value should be a matrix")
@@ -795,14 +1042,30 @@ class Pi4Matrix(AbstractMatrix):
 
 
 class EnhancedInt(int):
-    def __init__(self, x: Union[str, bytes, SupportsInt] = ...) -> None:
+    """
+    Does everything a int can do, but can also be addressed bitwise (you can read, write, add and delete a bit at a
+    given position)
+
+    Bit representation is in little endian : the lowest indexes corresponding to the least significant bits
+    """
+    def __init__(self, x: Union[str, bytes, SupportsInt]) -> None:
         int.__init__(int(x))
         self.__value__ = int(x)
 
     @staticmethod
     def from_list(x: List[int]):
+        """Turns a list of bits into an EnhancedInt
+
+        Args:
+            x (List[int]): list of bits
+
+        Returns:
+            EnhancedInt: The EnhancedInt corresponding to the bit list
+        """
         _value = 0
         if isinstance(x, List):
+            if len(x) > 32:
+                raise ValueError("For now, only 32 bit ints are implemented, list too long (%d)" % len(x))
             for i in x:
                 if i not in [0, 1]:
                     raise ValueError('List must be composed of binary numbers (ie 0 or 1)')
@@ -893,10 +1156,6 @@ class EnhancedInt(int):
         self.__value__ <<= other
         return self
 
-    def __imatmul__(self, other):
-        self.__value__ @= other
-        return self
-
     def __imul__(self, other):
         self.__value__ *= other
         return self
@@ -939,14 +1198,8 @@ class EnhancedInt(int):
         self.__value__ ^= other
         return self
 
-    def __long__(self):
-        return long(self.__value__)
-
     def __lshift__(self, other):
         return self.__value__ << other
-
-    def __matmul__(self, other):
-        return self.__value__ @ other
 
     def __mod__(self, other):
         return self.__value__ % other
@@ -987,9 +1240,6 @@ class EnhancedInt(int):
     def __rlshift__(self, other):
         return other << self.__value__
 
-    def __rmatmul__(self, other):
-        return other @ self.__value__
-
     def __rmod__(self, other):
         return other % self.__value__
 
@@ -1026,9 +1276,6 @@ class EnhancedInt(int):
     def __trunc__(self):
         return math.trunc(self.__value__)
 
-    def __unicode__(self):
-        return unicode(self.__value__)
-
     def __and__(self, other):
         return self.__value__ and other
 
@@ -1060,23 +1307,20 @@ class EnhancedInt(int):
         """Returns the digit number *key* from the binary representation of *self* (little endian)
 
         Args:
-            key (int):
+            key (int): bit number to be returned
 
         Returns:
-            int:
+            int: value of the bit addressed
         """
         EnhancedInt._check_key_value(key)
         return (self.__value__ >> key) & 1
 
-    def __setitem__(self, key, value) -> None:
+    def __setitem__(self, key: int, value: int) -> None:
         """Changes the value of the *key*th bit of *self* (little endian)
 
         Args:
-            key:
-            value:
-
-        Returns:
-
+            key (int): index of bit to be modified
+            value (int): bit value (must be 0 or 1)
         """
         EnhancedInt._check_key_value(key)
         if value != 0 and value != 1:
@@ -1087,14 +1331,11 @@ class EnhancedInt(int):
         if self[key] and not value:
             self.__value__ -= 1 << key
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: int):
         """Removes the *key*th bit of *self*, the more significant bits are moved to te left (divided by 2) (little endian)
 
         Args:
-            key:
-
-        Returns:
-
+            key (int): index of bit to be deleted
         """
         EnhancedInt._check_key_value(key)
         _end_word = EnhancedInt(self.__value__)
@@ -1105,6 +1346,12 @@ class EnhancedInt(int):
         self.__value__ += _end_word >> 1
 
     def insert(self, index: int, value: int):
+        """Insert *value* in *self* at index *index*.
+
+        Args:
+            index (int): insertion index
+            value (int): bit value (must be in [0, 1]
+        """
         if value != 0 and value != 1:
             raise ValueError("Value must be 0 or 1, %d given" % value)
         if self.bit_length() == 32:
@@ -1114,6 +1361,15 @@ class EnhancedInt(int):
         self[index] = value
 
     def index(self, value: int) -> int:
+        """Returns the index of the first *value* found in *self*. *value* is the value of a bit, hence, it must be 0 or 1.
+        If *value* is not found, will return -1
+
+        Args:
+            value (int): bit value to be searched
+
+        Returns:
+            int: index of *value*
+        """
         if value != 0 and value != 1:
             raise ValueError("Value must be 0 or 1, %d given" % value)
         for i in np.arange(32):
@@ -1122,6 +1378,19 @@ class EnhancedInt(int):
         return -1
 
     def count(self, i: int) -> int:
+        """Returns the number of *i* in *self*. *i* is the value of a bit, hence, it must be 0 or 1.
+
+        Examples:
+            >>> EnhancedInt(5).count(1)
+            2
+            # bit representation of 5 : 0...0101
+
+        Args:
+            i (int): bit value to be counted
+
+        Returns:
+            int: number of *i* found in *self*
+        """
         if i != 0 and i != 1:
             raise ValueError("Value must be 0 or 1, %d given" % i)
         count = 0
@@ -1131,11 +1400,15 @@ class EnhancedInt(int):
         return count
 
     def bit_length(self):
+        """Returns the bit length of *self*. If *self* == 0, then will return 1
+
+        Returns:
+            int: bit size of *self*
+        """
         try:
             _last_1 = list(reversed(self)).index(1)
         except ValueError:
             _last_1 = 31
-        # return 32 - list(reversed(self)).index(1)
         return 32 - _last_1
 
 
