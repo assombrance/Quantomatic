@@ -31,6 +31,13 @@ $ sbt assembly
 On linux and Mac OS, you can use the stript `Quantomatic.sh` to run the compiled version.  
 Use `Quantomatic.bat` instead on Windows.
 
+## Documentation
+You can compile the documentation using Sphinx (I used `Sphinx v1.7.2`).
+To compile, simply run :
+~~~
+$ [project directory]/doc/_templates/make html
+~~~
+
 ## Disclaimer
 This software is a for of the Quantomatic project from akissinger.  
 Exept from the matrix bit, everything has been done [there](https://github.com/Quantomatic/quantomatic).  
