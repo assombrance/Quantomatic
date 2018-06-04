@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = Qanto-matrix
+SPHINXPROJ    = Quanto-matrix
 SOURCEDIR     = .
 BUILDDIR      = ../_build
 

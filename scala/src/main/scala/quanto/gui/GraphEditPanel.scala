@@ -1,6 +1,11 @@
 package quanto.gui
 
-import javax.swing.{ImageIcon, JTextField}
+import java.awt
+import java.awt.{Font, Toolkit}
+import java.awt.datatransfer.StringSelection
+import java.awt.event.ActionListener
+
+import javax.swing.{ImageIcon, JButton, JLabel, JTextField}
 import quanto.data._
 import quanto.gui.graphview.GraphView
 import quanto.util.swing.ToolBar
@@ -191,12 +196,36 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
                 } else {
                   val resultArray = result.split("_______________")
-                  if (resultArray.length == 1){
-                    Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
-                  } else {
-                    val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
-                    Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                  System.out.println(result)
+                  var content: Array[AnyRef] = null
+                  def copyButton(copyText: String): JButton = {
+                    val copyButton = new JButton("Copy")
+                    val copyAction = new ActionListener {
+                      override def actionPerformed(e: awt.event.ActionEvent): Unit = {
+                        val stringSelection = new StringSelection(copyText)
+                        val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
+                        clipboard.setContents(stringSelection, null)
+                      }
+                    }
+                    copyButton.addActionListener(copyAction)
+                    copyButton
                   }
+                  if (resultArray.length == 1) {
+                    val matrix : String = resultArray(1)
+                    val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
+                      .replace(" ", "&nbsp;")
+                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
+                    matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                    content = Array(matrixLabel, copyButton(matrix))
+                  } else {
+                    val matrix : String = resultArray(1)
+                    val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
+                      .replace(" ", "&nbsp;")
+                    val matrixLabel : JLabel = new JLabel(matrixLabelText)
+                    matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                    content = Array(resultArray(0), matrixLabel, copyButton(matrix))
+                  }
+                  Dialog.showMessage(title = "Graph Matrix Result", message = content)
                 }
               } else {
                 val inputs = new JTextField
@@ -235,13 +264,35 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
                   } else {
                     val resultArray = result.split("_______________")
-                    if (resultArray.length == 1) {
-                      val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(0)))
-                      Dialog.showMessage(title = "Graph Matrix Result", message = content)
-                    } else {
-                      val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
-                      Dialog.showMessage(title = "Graph Matrix Result", message = content)
+                    var content: Array[AnyRef] = null
+                    def copyButton(copyText: String): JButton = {
+                      val copyButton = new JButton("Copy")
+                      val copyAction = new ActionListener {
+                        override def actionPerformed(e: awt.event.ActionEvent): Unit = {
+                          val stringSelection = new StringSelection(copyText)
+                          val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
+                          clipboard.setContents(stringSelection, null)
+                        }
+                      }
+                      copyButton.addActionListener(copyAction)
+                      copyButton
                     }
+                    if (resultArray.length == 1) {
+                      val matrix : String = resultArray(1)
+                      val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
+                        .replace(" ", "&nbsp;")
+                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
+                      matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                      content = Array(matrixLabel, copyButton(matrix))
+                    } else {
+                      val matrix : String = resultArray(1)
+                      val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
+                        .replace(" ", "&nbsp;")
+                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
+                      matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                      content = Array(resultArray(0), matrixLabel, copyButton(matrix))
+                    }
+                    Dialog.showMessage(title = "Graph Matrix Result", message = content)
                   }
                 }
               }

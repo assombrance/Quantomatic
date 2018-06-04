@@ -261,7 +261,7 @@ def tensor_power(a: GenericMatrix, power: int):
         GenericMatrix: 'power'
     """
     if power < 0:
-        raise NameError('Tensor power not defined for a negative power')
+        raise ValueError('Tensor power not defined for a negative power')
     if power == 0:
         return np.identity(1)
     else:

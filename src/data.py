@@ -606,7 +606,7 @@ class Pi4Matrix(AbstractMatrix):
             GenericMatrix: 'power'
         """
         if power < 0:
-            raise NameError('Tensor power not defined for a negative power')
+            raise ValueError('Tensor power not defined for a negative power')
         if power == 0:
             return Pi4Matrix(np.identity(1))
         else:

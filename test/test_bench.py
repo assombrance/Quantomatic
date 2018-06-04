@@ -23,7 +23,7 @@ def naive_multiplication(m0: np.matrix, m1: np.matrix):
     shape_m1 = m1.shape
     m01 = np.zeros((shape_m0[0], shape_m1[1]))
     if shape_m0[1] != shape_m1[0]:
-        raise NameError("Dimensions not aligned : dim0(m0)=" + str(shape_m0[1]) + " and dim1(m1)=" + str(shape_m1[0]))
+        raise ValueError("Dimensions not aligned : dim0(m0)=" + str(shape_m0[1]) + " and dim1(m1)=" + str(shape_m1[0]))
     for i in np.arange(shape_m0[0]):
         for j in np.arange(shape_m1[1]):
             for k in np.arange(shape_m1[0]):

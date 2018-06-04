@@ -57,7 +57,7 @@ def check_for_doubles(inputs: list, outputs: list) -> None:
         if i % 2:
             double_simplified.append(wire)
     if double_simplified:
-        raise NameError('Common node in Inputs and Outputs : ' + str(double_simplified))
+        raise ValueError('Common node in Inputs and Outputs : ' + str(double_simplified))
 
 
 def load_dictionaries(diagram_file_path: str) -> (dict, dict, dict):
@@ -104,7 +104,6 @@ def interpret_i_o(raw_io: List[str]) -> (List[str], List[str]):
         raise ValueError("Bad argument list")
     raw_inputs = ""
     raw_outputs = ""
-    print(raw_io)
     if len(raw_io) == 3:
         raw_inputs = raw_io[2]
     if len(raw_io) > 3:
@@ -141,7 +140,7 @@ def i_o_to_data(i_o_list: List[str], wires: List[Wire]) -> List[Wire]:
                 found = True
                 break
         if not found:
-            raise NameError('Boundary \'' + i_o_name + '\' not in wire_vertices dictionary')
+            raise ValueError('Boundary \'' + i_o_name + '\' not in wire_vertices dictionary')
     return i_o_wires
 
 
@@ -173,7 +172,7 @@ def manage_i_o(wires: List[Wire], edges: List[Edge], inputs_order_list: List[str
                         outputs_order_list.append(wire.name)
                         assumed_order = True
                     else:
-                        raise NameError('Not all wire edges in Inputs + Outputs (missing \'' + wire.name + '\')')
+                        raise ValueError('Not all wire edges in Inputs + Outputs (missing \'' + wire.name + '\')')
     return assumed_order, inputs_order_list, outputs_order_list
 
 
