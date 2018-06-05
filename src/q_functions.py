@@ -4,7 +4,7 @@ Module focused on going through the graph.
 """
 from typing import List
 
-import collections
+from collections import Iterable
 import numpy as np
 
 import divide_conquer
@@ -12,8 +12,9 @@ import divide_conquer
 from data import UsedFragment, Node, Wire, Edge, GenericMatrix, InterMatrixLink, ConnectionPoint
 
 
-def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> np.matrix:
-    """
+def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix:
+    """split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix
+
     Recursive function taking in a graph and returning the corresponding matrix.
 
     To do so, split the graph in two, passes the two halves to it's next iteration and reunite the two matrix obtained
@@ -22,30 +23,39 @@ def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], 
     The main part of this function is converting the graph format to the matrix format. tmp
 
     Args:
-        nodes:
-        edges:
-        inputs:
-        outputs:
+        nodes (List[Node]): nodes in the diagram considered
+        edges (List[Edge]): edges in the diagram considered
+        inputs (List[Wire]): inputs in the diagram considered
+        outputs (List[Wire]): outputs in the diagram considered
 
     Returns:
-
+        GenericMatrix: matrix corresponding to the given diagram
     """
-    # TODO problem if edges not connected to a node (input cup, output cap or input-output edge)
-    # for now, let's assume this problem won't happen and we'll figure it out later
-    if len(nodes) == 1:
+    if len(nodes) == 0:
+        return no_node_matrix(edges, inputs, outputs)
+    elif len(nodes) == 1 and not no_node_edges_detection(edges):
         try:
             return UsedFragment.node_to_matrix(nodes[0], len(inputs), len(outputs))
         except AttributeError:
             return fallback_node_to_matrix(nodes[0], len(inputs), len(outputs))
     else:
-        half = len(nodes) // 2
-        first_half_nodes = nodes[:half]
-        second_half_nodes = nodes[half:]
+        if no_node_edges_detection(edges):
+            # degenerate cases
+            first_half_nodes = []
+            second_half_nodes = nodes
 
-        first_half_edges, first_half_inputs, first_half_outputs = filter_edges_inputs_outputs(first_half_nodes,
-                                                                                              edges, inputs, outputs)
-        second_half_edges, second_half_inputs, second_half_outputs = filter_edges_inputs_outputs(second_half_nodes,
-                                                                                                 edges, inputs, outputs)
+            first_half_edges, first_half_inputs, first_half_outputs = \
+                filter_edges_inputs_outputs_by_nodes_negative(second_half_nodes, edges, inputs, outputs)
+        else:
+            half = len(nodes) // 2
+            first_half_nodes = nodes[:half]
+            second_half_nodes = nodes[half:]
+
+            first_half_edges, first_half_inputs, first_half_outputs = \
+                filter_edges_inputs_outputs_by_nodes(first_half_nodes, edges, inputs, outputs)
+
+        second_half_edges, second_half_inputs, second_half_outputs = \
+            filter_edges_inputs_outputs_by_nodes(second_half_nodes, edges, inputs, outputs)
 
         first_half_matrix = split_and_reunite(first_half_nodes, first_half_edges,
                                               first_half_inputs, first_half_outputs)
@@ -53,19 +63,87 @@ def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], 
                                                second_half_inputs, second_half_outputs)
 
         inter_matrix_link = matrix_linker(first_half_outputs, second_half_outputs)
-        input_connections = wires_to_connection_point(inputs, edges, first_half_nodes, second_half_nodes, False)
-        output_connections = wires_to_connection_point(outputs, edges, first_half_nodes, second_half_nodes, True)
-        # TODO I done shit ... output connexion should be calculated from first_half_outputs and second_half_outputs,
-        # TODO here, I'm trying to reinvent the wheel and i'm risking de-synchronisation between the outputs
-        # (same for inputs)
+
+        input_connections = wires_to_connection_point_node_sorted(inputs, edges,
+                                                                  first_half_nodes, second_half_nodes, False)
+        output_connections = wires_to_connection_point_node_sorted(outputs, edges,
+                                                                   first_half_nodes, second_half_nodes, True)
 
         return divide_conquer.fusion_matrices(first_half_matrix, second_half_matrix, input_connections,
                                               output_connections, inter_matrix_link)
 
 
-def wires_to_connection_point(wires: List[Wire], edges: List[Edge], nodes_group_1: List[Node],
-                              nodes_group_2: List[Node], is_output: bool) -> List[ConnectionPoint]:
+def no_node_edges_detection(edges: List[Edge]) -> bool:
+    """no_node_edges_detection(edges: List[Edge]) -> bool
+
+    Used to check if the function no_node_matrix has to be used, return *True* if at least one edge doesn't contain
+    a node, *False* otherwise.
+
+    Args:
+        edges (List[Edge]): list of edges to be checked
+
+    Returns:
+        bool: is there one edge without a node in it ?
     """
+    for edge in edges:
+        if not isinstance(edge.n1, Node) and not isinstance(edge.n2, Node):
+            return True
+    return False
+
+
+def no_node_matrix(edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix:
+    """no_node_matrix(edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix
+
+    Works similarly to split and reunite but without any node
+
+    Args:
+        edges (List[Edge]): edges in the diagram considered
+        inputs (List[Wire]): inputs in the diagram considered
+        outputs (List[Wire]): outputs in the diagram considered
+
+    Returns:
+        GenericMatrix: matrix corresponding to the given diagram
+    """
+    if 2*len(edges) != len(inputs) + len(outputs):
+        raise ValueError("len(edges) != len(inputs) + len(outputs) : len(edges) == %d, len(inputs) == %d and "
+                         "len(outputs) == %d" % (len(edges), len(inputs), len(outputs)))
+    if len(edges) == 0:
+        return UsedFragment(1)
+    if len(edges) == 1:
+        if len(inputs) == 0:
+            return UsedFragment([[1],
+                                 [0],
+                                 [0],
+                                 [1]])
+        if len(inputs) == 1:
+            return UsedFragment([[1, 0],
+                                 [0, 1]])
+        if len(inputs) == 2:
+            return UsedFragment([[1, 0, 0, 1]])
+        else:
+            raise RuntimeError("Unhandled case of no node matrix")
+    else:
+        half = len(edges) // 2
+        first_half_edges = edges[:half]
+        second_half_edges = edges[half:]
+
+        first_half_inputs, first_half_outputs = filter_inputs_outputs_by_edges(first_half_edges, inputs, outputs)
+        second_half_inputs, second_half_outputs = filter_inputs_outputs_by_edges(second_half_edges, inputs, outputs)
+
+        first_half_matrix = no_node_matrix(first_half_edges, first_half_inputs, first_half_outputs)
+        second_half_matrix = no_node_matrix(second_half_edges, second_half_inputs, second_half_outputs)
+
+        input_connections = wires_to_connection_point_edge_sorted(inputs, first_half_edges, second_half_edges, False)
+        output_connections = wires_to_connection_point_edge_sorted(outputs, first_half_edges, second_half_edges, True)
+
+        return divide_conquer.fusion_matrices(first_half_matrix, second_half_matrix, input_connections,
+                                              output_connections, [])
+
+
+def wires_to_connection_point_node_sorted(wires: List[Wire], edges: List[Edge], nodes_group_1: List[Node],
+                                          nodes_group_2: List[Node], is_output: bool) -> List[ConnectionPoint]:
+    """wires_to_connection_point_node_sorted(wires: List[Wire], edges: List[Edge], nodes_group_1: List[Node], nodes_group_2: List[Node], is_output: bool) -> List[ConnectionPoint]
+
     Part of the conversion system from the data under the graph form (nodes, wires and edges) to the matrix form
     (links, connection points). In particular, Does the *ConnectionPoint* part.
 
@@ -77,12 +155,12 @@ def wires_to_connection_point(wires: List[Wire], edges: List[Edge], nodes_group_
         is_output (bool): are the wires given outputs or inputs
 
     Returns:
-
+        List[ConnectionPoint]: connection points to this graph
     """
-    connection_points = []  # type: List[ConnectionPoint]
-    connection_points_dict = {}  # type: dict
+    connection_points = []
+    connection_points_dict = {}
 
-    def _wires_to_connection_point(_wires, _edges, _nodes_group, _is_output, _is_matrix_2, _cp_dict):
+    def _wires_to_connection_point_node_shortcut(_wires, _edges, _nodes_group, _is_output, _is_matrix_2, _cp_dict):
         index = 0
         for node in _nodes_group:
             # we are iterating over the nodes to ensure an order, indeed since the two halves are done depending on the
@@ -106,17 +184,69 @@ def wires_to_connection_point(wires: List[Wire], edges: List[Edge], nodes_group_
 
         return _cp_dict
 
-    connection_points_dict = _wires_to_connection_point(wires, edges, nodes_group_1, is_output,
-                                                        False, connection_points_dict)
-    connection_points_dict = _wires_to_connection_point(wires, edges, nodes_group_2, is_output,
-                                                        True, connection_points_dict)
+    def _wires_to_connection_point_no_node_shortcut(_wires, _edges, _nodes_group_2, _is_output, _is_matrix_2, _cp_dict):
+        # adds the wires connected to none of the nodes from _node_group_2
+        index = 0
+        for wire in _wires:
+            unlinked = True
+            for _node in _nodes_group_2:
+                for _edge in _edges:
+                    if _node in _edge and wire in _edge:
+                        unlinked = False
+            if unlinked:
+                _cp_dict[index] = ConnectionPoint(is_matrix_2=_is_matrix_2, is_out=is_output, index=index)
+            index += 1
+
+        return _cp_dict
+
+    # this test is only done for the first group since for this algorithm, only the first group may be empty
+    if nodes_group_1:
+        connection_points_dict = _wires_to_connection_point_node_shortcut(wires, edges, nodes_group_1, is_output,
+                                                                          False, connection_points_dict)
+    else:
+        connection_points_dict = _wires_to_connection_point_no_node_shortcut(wires, edges, nodes_group_2, is_output,
+                                                                             False, connection_points_dict)
+    connection_points_dict = _wires_to_connection_point_node_shortcut(wires, edges, nodes_group_2, is_output,
+                                                                      True, connection_points_dict)
     for i in np.arange(len(wires)):
         connection_points.append(connection_points_dict[i])
     return connection_points
 
 
-def matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterMatrixLink]:
+def wires_to_connection_point_edge_sorted(wires: List[Wire], edges_group_1: List[Edge], edges_group_2: List[Edge],
+                                          is_output: bool) -> List[ConnectionPoint]:
+    """wires_to_connection_point_edge_sorted(wires: List[Wire], edges_group_1: List[Edge], edges_group_2: List[Edge], is_output: bool) -> List[ConnectionPoint]
+
+    Part of the conversion system from the data under the graph form (wires and edges) to the matrix form
+    (links, connection points). In particular, Does the *ConnectionPoint* part (specialised for graphs without nodes).
+
+    Args:
+        wires (List[Wire]): list of the considered wires in the diagram
+        edges_group_1 (List[Edge]: list of all the edges in the diagram
+        edges_group_2 (List[Edge]: list of all the edges in the diagram
+        is_output (bool): are the wires given outputs or inputs
+
+    Returns:
+        List[ConnectionPoint]: connection points to this graph
     """
+    connection_points = []
+    edges_group_1_wire_set = {edge.n1 for edge in edges_group_1} | {edge.n2 for edge in edges_group_1}
+    edges_group_2_wire_set = {edge.n1 for edge in edges_group_2} | {edge.n2 for edge in edges_group_2}
+
+    index = 0
+    for wire in wires:
+        if wire in edges_group_1_wire_set:
+            connection_points.append(ConnectionPoint(False, is_output, index))
+        if wire in edges_group_2_wire_set:
+            connection_points.append(ConnectionPoint(True, is_output, index))
+        index += 1
+
+    return connection_points
+
+
+def matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterMatrixLink]:
+    """matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterMatrixLink]
+
     Creates a list of *InterMatrixLink* from the common outputs of **m1** and **m2**.
 
     Links between the two matrices are forced to be between their outputs, that's why you don't need the inputs.
@@ -128,7 +258,7 @@ def matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterM
     Returns:
         List[InterMatrixLink]: links between **m1** and **m2** as a *InterMatrixLink* list
     """
-    inter_matrix_link = []  # type: List[InterMatrixLink]
+    inter_matrix_link = []
     for m1_output in m1_outputs:
         # because of the way the filter has been done, not inter matrix link should be between anything else than
         # the outputs of the first matrix and the second one
@@ -142,9 +272,10 @@ def matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterM
     return inter_matrix_link
 
 
-def filter_edges_inputs_outputs(nodes: List[Node], edges: List[Edge],
-                                inputs: List[Wire], outputs: List[Wire]) -> (List[Edge], List[Wire], List[Wire]):
-    """
+def filter_edges_inputs_outputs_by_nodes(nodes: List[Node], edges: List[Edge], inputs: List[Wire],
+                                         outputs: List[Wire]) -> (List[Edge], List[Wire], List[Wire]):
+    """filter_edges_inputs_outputs_by_nodes(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> List[Edge], List[Wire], List[Wire]
+
     Since the node list is split in two, many edges and wires don't need to be considered for the next iteration of
     each half. Thus, the edges, inputs and outputs are filtered so they are not passed to the next iteration if they are
     not in relation with the given nodes
@@ -180,8 +311,73 @@ def filter_edges_inputs_outputs(nodes: List[Node], edges: List[Edge],
     return new_edges, new_inputs, new_outputs
 
 
-def fallback_node_to_matrix(node: Node, in_number: int, out_number: int) -> np.matrix:
+def filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], edges: List[Edge], inputs: List[Wire],
+                                                  outputs: List[Wire]) -> (List[Edge], List[Wire], List[Wire]):
+    """filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> List[Edge], List[Wire], List[Wire]
+
+    Since the node list is split in two, many edges and wires don't need to be considered for the next iteration of
+    each half. Thus, the edges, inputs and outputs are filtered so they are not passed to the next iteration if they are
+    in relation with the given nodes from the other half
+
+    Args:
+        nodes (List[Node]): nodes to apply the filter from
+        edges (List[Edge]): edges to be filtered
+        inputs (List[Wire]): inputs to be filtered
+        outputs (List[Wire]): outputs to be filtered
+
+    Returns:
+        List[Edge], List[Wire], List[Wire]: edges, inputs and outputs without the members in relation with the given
+        nodes
     """
+    new_edges = edges[:]
+    new_inputs = inputs[:]
+    new_outputs = outputs[:]
+    for edge in edges:
+        if set(edge).intersection(nodes):  # edge doesn't contain any node from the list
+            new_edges.remove(edge)
+            if set(edge).intersection(inputs):
+                new_inputs.remove(list(set(edge).intersection(inputs))[0])
+            if Wire(edge.name) in inputs:
+                new_inputs.remove(Wire(edge.name))
+            if set(edge).intersection(outputs):
+                new_outputs.remove(list(set(edge).intersection(outputs))[0])
+            if Wire(edge.name) in outputs:
+                new_outputs.remove(Wire(edge.name))
+    return new_edges, new_inputs, new_outputs
+
+
+def filter_inputs_outputs_by_edges(edges: List[Edge],
+                                   inputs: List[Wire], outputs: List[Wire]) -> (List[Wire], List[Wire]):
+    """filter_inputs_outputs_by_edges(edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> List[Wire], List[Wire]
+
+    Since the edge list is split in two, many wires don't need to be considered for the next iteration of
+    each half. Thus, the inputs and outputs are filtered so they are not passed to the next iteration if they are
+    not in relation with the given edges
+
+    Args:
+        edges (List[Edge]): edges to apply the filter from
+        inputs (List[Wire]): inputs to be filtered
+        outputs (List[Wire]): outputs to be filtered
+
+    Returns:
+        List[Wire], List[Wire]: inputs and outputs without the members not in relation with the given edges
+    """
+    new_inputs = inputs[:]
+    new_outputs = outputs[:]
+    for input_wire in inputs:
+        for edge in edges:
+            if input_wire not in edge:
+                new_inputs.remove(input_wire)
+    for output_wire in outputs:
+        for edge in edges:
+            if output_wire not in edge:
+                new_outputs.remove(output_wire)
+    return new_inputs, new_outputs
+
+
+def fallback_node_to_matrix(node: Node, in_number: int, out_number: int) -> np.matrix:
+    """fallback_node_to_matrix(node: Node, in_number: int, out_number: int) -> np.matrix
+
     This implementation of the algorithm can be used with matrix from numpy or matrix specified in :ref:`data`.
     Matrix implemented in **data** contain a *node_to_matrix* method but numpy matrix will use this fallback method.
 
@@ -216,22 +412,24 @@ def fallback_node_to_matrix(node: Node, in_number: int, out_number: int) -> np.m
     return result
 
 
-def symmetric_difference(x: collections.Iterable, y: collections.Iterable):
-    """
+def symmetric_difference(x: Iterable, y: Iterable) -> Iterable:
+    """symmetric_difference(x: Iterable, y: Iterable) -> Iterable
+
     Symmetric difference between two iterables
 
     Args:
-        x (iterable): first iterable
-        y (iterable): second iterable
+        x (Iterable): first iterable
+        y (Iterable): second iterable
 
     Returns:
-        iterable: symmetric difference between *x* and *y*
+        Iterable: symmetric difference between *x* and *y*
     """
     return [i for i in x if i not in y] + [i for i in y if i not in x]
 
 
-def tensor_product(a: GenericMatrix, b: GenericMatrix):
-    """
+def tensor_product(a: GenericMatrix, b: GenericMatrix) -> GenericMatrix:
+    """tensor_product(a: GenericMatrix, b: GenericMatrix) -> GenericMatrix
+
     Computes the tensor product of matrix *a* and *b*
     
     Args:
@@ -250,8 +448,9 @@ def tensor_product(a: GenericMatrix, b: GenericMatrix):
     return result
 
 
-def tensor_power(a: GenericMatrix, power: int):
-    """
+def tensor_power(a: GenericMatrix, power: int) -> GenericMatrix:
+    """tensor_power(a: GenericMatrix, power: int) -> GenericMatrix
+
     Computes the *a**power*, in the tensor sense
 
     Args:
@@ -263,6 +462,9 @@ def tensor_power(a: GenericMatrix, power: int):
     if power < 0:
         raise ValueError('Tensor power not defined for a negative power')
     if power == 0:
-        return np.identity(1)
+        return UsedFragment(np.identity(1))
     else:
-        return tensor_product(a, tensor_power(a, power - 1))
+        try:
+            return a.tensor_product(a.tensor_power(power - 1))
+        except AttributeError:
+            return tensor_product(a, tensor_power(a, power - 1))

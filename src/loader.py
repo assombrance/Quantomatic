@@ -35,8 +35,8 @@ def main(diagram_file_path: str, inputs: List[str], outputs: List[str]) -> (bool
     return assumed_order, inputs, outputs, m
 
 
-def check_for_doubles(inputs: list, outputs: list) -> None:
-    """check_for_doubles(inputs: list, outputs: list) -> None
+def check_for_doubles(inputs: list, outputs: list):
+    """check_for_doubles(inputs: list, outputs: list)
 
     Raise an error if an element is both in the *inputs* and the *outputs*
 

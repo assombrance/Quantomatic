@@ -54,10 +54,7 @@ test in assembly := {}
 
 assemblyJarName in assembly := "Quantomatic.jar"
 
-mainClass in assembly := Some("quanto.gui.QuantoDerive")
-
-
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
 // to comment out to try out the others main
-mainClass in (Compile, run) := Some("quanto.gui.QuantoDerive")
+mainClass in Compile := Some("quanto.gui.QuantoDerive")
