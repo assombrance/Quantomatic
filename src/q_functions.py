@@ -2,14 +2,14 @@
 """
 Module focused on going through the graph.
 """
+from copy import deepcopy
 from typing import List
-
 from collections import Iterable
 import numpy as np
 
 import divide_conquer
 
-from data import UsedFragment, Node, Wire, Edge, GenericMatrix, InterMatrixLink, ConnectionPoint
+from data import UsedFragment, Node, Wire, Edge, GenericMatrix, InterMatrixLink, ConnectionPoint, Graph
 
 
 def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix:
@@ -40,7 +40,7 @@ def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], 
             return fallback_node_to_matrix(nodes[0], len(inputs), len(outputs))
     else:
         if no_node_edges_detection(edges):
-            # degenerate cases
+            # degenerate cases, when a graph contains only wires
             first_half_nodes = []
             second_half_nodes = nodes
 
@@ -71,6 +71,31 @@ def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], 
 
         return divide_conquer.fusion_matrices(first_half_matrix, second_half_matrix, input_connections,
                                               output_connections, inter_matrix_link)
+
+
+def connected_graphs_split(graph: Graph) -> (Graph, Graph):
+    """ If possible, splits a graph in two separate graphs, the first one has to be connected.
+
+    Args:
+        graph (Graph): graph to be split in two
+
+    Returns:
+        (Graph, Graph): a connected graph and the rest of the edges, nodes and so on ...
+    """
+    # possible improvement, return balanced graphs
+    if graph.nodes:
+        increasing_graph = Graph(nodes=[graph.nodes[1]])
+    elif graph.inputs:
+        increasing_graph = Graph(inputs=[graph.inputs[1]])
+    elif graph.outputs:
+        increasing_graph = Graph(outputs=[graph.outputs[1]])
+    else:
+        # graph empty
+        return Graph([], [], [], []), deepcopy(graph)
+    while increasing_graph.augment(graph):
+        pass
+    leftover = graph - increasing_graph
+    return increasing_graph, leftover
 
 
 def no_node_edges_detection(edges: List[Edge]) -> bool:

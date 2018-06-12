@@ -78,7 +78,7 @@ class Edge(PrettyStr, AtrComparison):
         n2 (Wire): second wire of the edge
         label (str): label of the edge
     """
-    def __init__(self, name: str, n1: Wire, n2: Wire, label: str = "") -> None:
+    def __init__(self, name: str, n1: Wire, n2: Wire, label: str = ""):
         self.name = name
         self.n1 = n1
         self.n2 = n2
@@ -94,6 +94,152 @@ class Edge(PrettyStr, AtrComparison):
         """
         yield self.n1
         yield self.n2
+
+
+class Graph:
+    """
+    Structure containing all the information of a graph in one place, nodes are theatrically unnecessary but are very
+    useful to access directly (and we could think about situations where a graph is in a transition step and needs a
+    disjunction between the nodes and the edges).
+    """
+    def __init__(self, nodes: List[Node]=None, edges: List[Edge]=None,
+                 inputs: List[Wire]=None, outputs: List[Wire]=None):
+        if nodes is None:
+            nodes = []
+        if edges is None:
+            edges = []
+        if inputs is None:
+            inputs = []
+        if outputs is None:
+            outputs = []
+        self.nodes = nodes
+        self.edges = edges
+        self.inputs = inputs
+        self.outputs = outputs
+
+    def augment(self, containing_graph: 'Graph') -> bool:
+        """ Increase self by adding it's neighbours and the edges linking it to those neighbours, as well as edges
+        linking neighbours between them. Returns *True* is the graph has been augmented, *False* otherwise
+
+        Args:
+            containing_graph (Graph): graph to pick neighbours from
+
+        Returns:
+            bool: *True* if the graph has been augmented, *False* otherwise
+        """
+        neighbours = self.neighbours(containing_graph)
+        if neighbours.inputs + neighbours.outputs + neighbours.nodes:
+            self.outputs += neighbours.outputs
+            self.inputs += neighbours.inputs
+            self.nodes += neighbours.nodes
+            self.edges += neighbours.edges
+            return True
+        else:
+            return False
+
+    def neighbours(self, containing_graph: 'Graph') -> 'Graph':
+        """ Returns a partial graph (not all edges' ends are necessarily in the nodes or in the I/O) containing all the
+        neighbours wires from *containing_graph* as well as the edges between those neighbours and the edges between the
+        neighbours and the wire from *self*
+
+        Args:
+            containing_graph (Graph): graph to pick the neighbours from
+
+        Returns:
+            Graph: graph containing the neighbours of *self* and the proper edges
+        """
+        neighbours = Graph()
+        for edge in containing_graph.edges:
+            start_wires = self.outputs + self.inputs + self.nodes
+            intersection = [wire for wire in edge if wire in start_wires]
+            if len(intersection) == 1:
+                neighbour = list(set(edge) - set(intersection))[0]
+                if neighbour in containing_graph.outputs:
+                    neighbours.outputs.append(neighbour)
+                if neighbour in containing_graph.inputs:
+                    neighbours.inputs.append(neighbour)
+                if neighbour in containing_graph.nodes:
+                    neighbours.nodes.append(neighbour)
+                neighbours.edges.append(edge)
+        for edge in containing_graph.edges:
+            intersection = set(neighbours.outputs + neighbours.inputs + neighbours.nodes)\
+                .intersection(edge)
+            if len(intersection) == 2 or (edge.n1 in intersection and edge.n1 == edge.n2):
+                neighbours.edges.append(edge)
+        return neighbours
+
+    def __add__(self, other: 'Graph') -> 'Graph':
+        if not isinstance(other, Graph):
+            raise TypeError('other should be a Graph')
+        result = Graph()
+        result.outputs = self.outputs + other.outputs
+        result.inputs = self.inputs + other.inputs
+        result.nodes = self.nodes + other.nodes
+        result.edges = self.edges + other.edges
+        return result
+
+    def __iadd__(self, other: 'Graph'):
+        if not isinstance(other, Graph):
+            raise TypeError('other should be a Graph')
+        self.outputs += other.outputs
+        self.inputs += other.inputs
+        self.nodes += other.nodes
+        self.edges += other.edges
+        return self
+
+    def __sub__(self, other: 'Graph') -> 'Graph':
+        if not isinstance(other, Graph):
+            raise TypeError('other should be a Graph')
+        result = Graph()
+        result.outputs = [outputWire for outputWire in self.outputs if outputWire not in other.outputs]
+        result.inputs = [inputWire for inputWire in self.inputs if inputWire not in other.inputs]
+        result.nodes = [node for node in self.nodes if node not in other.nodes]
+        result.edges = [edge for edge in self.edges if edge not in other.edges]
+        return result
+
+    def __eq__(self, other):
+        if not isinstance(other, Graph):
+            return False
+        inputs_diff = set(self.inputs).symmetric_difference(other.inputs)
+        outputs_diff = set(self.outputs).symmetric_difference(other.outputs)
+        nodes_diff = set(self.nodes).symmetric_difference(other.nodes)
+        edges_diff = set(self.edges).symmetric_difference(other.edges)
+        return not (inputs_diff or outputs_diff or nodes_diff or edges_diff)
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.__dict__.items())))
+
+    def __str__(self):
+        string = "\n<" + self.__class__.__name__ + ": \n"
+        if self.inputs:
+            string += "["
+            for input_wire in self.inputs:
+                string += str(input_wire) + ", "
+            string = string[:-2] + "] (inputs), \n"
+        else:
+            string += "[] (inputs), \n"
+        if self.outputs:
+            string += "["
+            for output_wire in self.outputs:
+                string += str(output_wire) + ", "
+            string = string[:-2] + "] (outputs), \n"
+        else:
+            string += "[] (outputs), \n"
+        if self.nodes:
+            string += "["
+            for node in self.nodes:
+                string += str(node) + ", "
+            string = string[:-2] + "] (nodes), \n"
+        else:
+            string += "[] (nodes), \n"
+        if self.edges:
+            string += "["
+            for edge in self.edges:
+                string += str(edge) + ", "
+            string = string[:-2] + "] (edges)>\n"
+        else:
+            string += "[] (edges)>\n"
+        return string
 
 
 class ConnectionPoint(PrettyStr, AtrComparison):
