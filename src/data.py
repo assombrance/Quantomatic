@@ -518,9 +518,9 @@ class Pi4Matrix(AbstractMatrix):
                 for _ in np.arange(fragment):
                     matrices.append(deepcopy(null_base))
                 if position < fragment:
-                    matrices[int(position)][-1, -1] = 1
+                    matrices[int(position)][-1, -1] += 1
                 else:
-                    matrices[int(position) - fragment][-1, -1] = -1
+                    matrices[int(position) - fragment][-1, -1] += -1
                 result = Pi4Matrix(matrices[0], matrices[1], matrices[2], matrices[3], 0)
             else:
                 raise ValueError('You are trying to create a Pi4Matrix from a node with an angle which is not a '
