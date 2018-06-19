@@ -151,3 +151,21 @@ def test_connected_graphs_split():
     small_graph = Graph(inputs=[g], outputs=[h], edges=[e14])
     g1, g2 = qf.connected_graphs_split(graph)
     assert g1 == small_graph or g2 == small_graph
+
+
+def test_graph_bool_true():
+    # assert g doesn't call bool(), hence the weird code with the if
+
+    g = Graph([Node('n')])
+
+    if g:
+        assert True
+    else:
+        assert False
+
+
+def test_graph_bool_false():
+
+    g = Graph()
+
+    assert not g

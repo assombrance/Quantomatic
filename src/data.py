@@ -117,6 +117,9 @@ class Graph:
         self.inputs = inputs
         self.outputs = outputs
 
+    def __bool__(self):
+        return bool(self.outputs) or bool(self.nodes) or bool(self.edges) or bool(self.inputs)
+
     def augment(self, containing_graph: 'Graph') -> bool:
         """ Increase self by adding it's neighbours and the edges linking it to those neighbours, as well as edges
         linking neighbours between them. Returns *True* is the graph has been augmented, *False* otherwise
@@ -154,13 +157,21 @@ class Graph:
             intersection = [wire for wire in edge if wire in start_wires]
             if len(intersection) == 1:
                 neighbour = list(set(edge) - set(intersection))[0]
-                if neighbour in containing_graph.outputs:
+                if neighbour in containing_graph.outputs and neighbour not in neighbours.outputs:
                     neighbours.outputs.append(neighbour)
-                if neighbour in containing_graph.inputs:
+                if neighbour in containing_graph.inputs and neighbour not in neighbours.inputs:
                     neighbours.inputs.append(neighbour)
-                if neighbour in containing_graph.nodes:
+                if neighbour in containing_graph.nodes and neighbour not in neighbours.nodes:
                     neighbours.nodes.append(neighbour)
                 neighbours.edges.append(edge)
+                temp_input_edge_wire = [wire for wire in containing_graph.inputs if wire.name == edge.name]
+                if temp_input_edge_wire and temp_input_edge_wire[0] not in neighbours.inputs + self.inputs:
+                    neighbours.inputs.append(temp_input_edge_wire[0])
+                    neighbours.edges.append(edge)
+                temp_output_edge_wire = [wire for wire in containing_graph.outputs if wire.name == edge.name]
+                if temp_output_edge_wire and temp_output_edge_wire[0] not in neighbours.outputs + self.outputs:
+                    neighbours.outputs.append(temp_output_edge_wire[0])
+                    neighbours.edges.append(edge)
         for edge in containing_graph.edges:
             intersection = set(neighbours.outputs + neighbours.inputs + neighbours.nodes)\
                 .intersection(edge)
@@ -664,9 +675,9 @@ class Pi4Matrix(AbstractMatrix):
                 for _ in np.arange(fragment):
                     matrices.append(deepcopy(null_base))
                 if position < fragment:
-                    matrices[int(position)][-1, -1] = 1
+                    matrices[int(position)][-1, -1] += 1
                 else:
-                    matrices[int(position) - fragment][-1, -1] = -1
+                    matrices[int(position) - fragment][-1, -1] += -1
                 result = Pi4Matrix(matrices[0], matrices[1], matrices[2], matrices[3], 0)
             else:
                 raise ValueError('You are trying to create a Pi4Matrix from a node with an angle which is not a '
@@ -1138,7 +1149,7 @@ class Pi4Matrix(AbstractMatrix):
             value (Pi4Matrix): value to set
         """
         if not isinstance(value, Pi4Matrix):
-            return ValueError("Value should be a matrix")
+            return TypeError("Value should be a matrix")
         if self.z < value.z:
             self.z = value.z
             self.m0 = self.m0 * (2 ** (value.z - self.z))

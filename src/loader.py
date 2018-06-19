@@ -7,7 +7,7 @@ import json
 from typing import List
 
 import q_functions as qf
-from data import Edge, Wire, Node, GenericMatrix
+from data import Edge, Wire, Node, GenericMatrix, Graph
 
 
 def main(diagram_file_path: str, inputs: List[str], outputs: List[str]) -> (bool, List[str], List[str], GenericMatrix):
@@ -31,7 +31,7 @@ def main(diagram_file_path: str, inputs: List[str], outputs: List[str]) -> (bool
     start_wires = i_o_to_data(inputs, wires)
     end_wires = i_o_to_data(outputs, wires)
 
-    m = qf.split_and_reunite(nodes, edges, start_wires, end_wires)
+    m = qf.split_and_reunite(Graph(nodes, edges, start_wires, end_wires))
     return assumed_order, inputs, outputs, m
 
 

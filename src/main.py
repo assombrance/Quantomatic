@@ -20,6 +20,12 @@ import numpy as np
 import loader
 
 
+# TODO remove later
+# seed = random.randint(0, 4294967295)
+# import os
+# os.environ['PYTHONHASHSEED'] = str(seed)
+# print(os.environ['PYTHONHASHSEED'])
+
 if __name__ == '__main__':
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)

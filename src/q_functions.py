@@ -12,7 +12,7 @@ import divide_conquer
 from data import UsedFragment, Node, Wire, Edge, GenericMatrix, InterMatrixLink, ConnectionPoint, Graph
 
 
-def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix:
+def split_and_reunite(graph: Graph) -> GenericMatrix:
     """split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix
 
     Recursive function taking in a graph and returning the corresponding matrix.
@@ -23,50 +23,56 @@ def split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], 
     The main part of this function is converting the graph format to the matrix format. tmp
 
     Args:
-        nodes (List[Node]): nodes in the diagram considered
-        edges (List[Edge]): edges in the diagram considered
-        inputs (List[Wire]): inputs in the diagram considered
-        outputs (List[Wire]): outputs in the diagram considered
+        graph (Graph): diagram considered
 
     Returns:
         GenericMatrix: matrix corresponding to the given diagram
     """
-    if len(nodes) == 0:
-        return no_node_matrix(edges, inputs, outputs)
-    elif len(nodes) == 1 and not no_node_edges_detection(edges):
+    if len(graph.nodes) == 0:
+        return no_node_matrix(graph.edges, graph.inputs, graph.outputs)
+    elif len(graph.nodes) == 1 and not no_node_edges_detection(graph.edges):
         try:
-            return UsedFragment.node_to_matrix(nodes[0], len(inputs), len(outputs))
+            return UsedFragment.node_to_matrix(graph.nodes[0], len(graph.inputs), len(graph.outputs))
         except AttributeError:
-            return fallback_node_to_matrix(nodes[0], len(inputs), len(outputs))
+            return fallback_node_to_matrix(graph.nodes[0], len(graph.inputs), len(graph.outputs))
     else:
-        if no_node_edges_detection(edges):
-            # degenerate cases, when a graph contains only wires
-            first_half_nodes = []
-            second_half_nodes = nodes
+        graph1, graph2 = connected_graphs_split(graph)
+        if not graph2:
+            if no_node_edges_detection(graph.edges):
+                # degenerate cases, when a graph contains only wires
+                first_half_nodes = []
+                second_half_nodes = graph.nodes
 
-            first_half_edges, first_half_inputs, first_half_outputs = \
-                filter_edges_inputs_outputs_by_nodes_negative(second_half_nodes, edges, inputs, outputs)
+                first_half_edges, first_half_inputs, first_half_outputs = \
+                    filter_edges_inputs_outputs_by_nodes_negative(second_half_nodes, graph.edges,
+                                                                  graph.inputs, graph.outputs)
+            else:
+                half = len(graph.nodes) // 2
+                first_half_nodes = graph.nodes[:half]
+                second_half_nodes = graph.nodes[half:]
+
+                first_half_edges, first_half_inputs, first_half_outputs = \
+                    filter_edges_inputs_outputs_by_nodes(first_half_nodes, graph.edges, graph.inputs, graph.outputs)
+
+            second_half_edges, second_half_inputs, second_half_outputs = \
+                filter_edges_inputs_outputs_by_nodes(second_half_nodes, graph.edges, graph.inputs, graph.outputs)
+
+            first_half_matrix = split_and_reunite(Graph(first_half_nodes, first_half_edges,
+                                                        first_half_inputs, first_half_outputs))
+            second_half_matrix = split_and_reunite(Graph(second_half_nodes, second_half_edges,
+                                                         second_half_inputs, second_half_outputs))
+
+            inter_matrix_link = matrix_linker(first_half_outputs, second_half_outputs)
         else:
-            half = len(nodes) // 2
-            first_half_nodes = nodes[:half]
-            second_half_nodes = nodes[half:]
+            first_half_nodes = graph1.nodes
+            second_half_nodes = graph2.nodes
+            first_half_matrix = split_and_reunite(graph1)
+            second_half_matrix = split_and_reunite(graph2)
+            inter_matrix_link = []
 
-            first_half_edges, first_half_inputs, first_half_outputs = \
-                filter_edges_inputs_outputs_by_nodes(first_half_nodes, edges, inputs, outputs)
-
-        second_half_edges, second_half_inputs, second_half_outputs = \
-            filter_edges_inputs_outputs_by_nodes(second_half_nodes, edges, inputs, outputs)
-
-        first_half_matrix = split_and_reunite(first_half_nodes, first_half_edges,
-                                              first_half_inputs, first_half_outputs)
-        second_half_matrix = split_and_reunite(second_half_nodes, second_half_edges,
-                                               second_half_inputs, second_half_outputs)
-
-        inter_matrix_link = matrix_linker(first_half_outputs, second_half_outputs)
-
-        input_connections = wires_to_connection_point_node_sorted(inputs, edges,
+        input_connections = wires_to_connection_point_node_sorted(graph.inputs, graph.edges,
                                                                   first_half_nodes, second_half_nodes, False)
-        output_connections = wires_to_connection_point_node_sorted(outputs, edges,
+        output_connections = wires_to_connection_point_node_sorted(graph.outputs, graph.edges,
                                                                    first_half_nodes, second_half_nodes, True)
 
         return divide_conquer.fusion_matrices(first_half_matrix, second_half_matrix, input_connections,
@@ -84,11 +90,11 @@ def connected_graphs_split(graph: Graph) -> (Graph, Graph):
     """
     # possible improvement, return balanced graphs
     if graph.nodes:
-        increasing_graph = Graph(nodes=[graph.nodes[1]])
+        increasing_graph = Graph(nodes=[graph.nodes[0]])
     elif graph.inputs:
-        increasing_graph = Graph(inputs=[graph.inputs[1]])
+        increasing_graph = Graph(inputs=[graph.inputs[0]])
     elif graph.outputs:
-        increasing_graph = Graph(outputs=[graph.outputs[1]])
+        increasing_graph = Graph(outputs=[graph.outputs[0]])
     else:
         # graph empty
         return Graph([], [], [], []), deepcopy(graph)
@@ -231,8 +237,12 @@ def wires_to_connection_point_node_sorted(wires: List[Wire], edges: List[Edge], 
     else:
         connection_points_dict = _wires_to_connection_point_no_node_shortcut(wires, edges, nodes_group_2, is_output,
                                                                              False, connection_points_dict)
-    connection_points_dict = _wires_to_connection_point_node_shortcut(wires, edges, nodes_group_2, is_output,
-                                                                      True, connection_points_dict)
+    if nodes_group_2:
+        connection_points_dict = _wires_to_connection_point_node_shortcut(wires, edges, nodes_group_2, is_output,
+                                                                          True, connection_points_dict)
+    else:
+        connection_points_dict = _wires_to_connection_point_no_node_shortcut(wires, edges, nodes_group_1, is_output,
+                                                                             True, connection_points_dict)
     for i in np.arange(len(wires)):
         connection_points.append(connection_points_dict[i])
     return connection_points
