@@ -21,6 +21,13 @@ class PrettyStr:
         string = string[:-2] + ">"
         return string
 
+    def __repr__(self) -> str:  # may be temporary
+        string = "<" + self.__class__.__name__ + ": "
+        for atr in sorted(self.__dict__):
+            string += str(self.__getattribute__(atr)) + " (" + atr + "), "
+        string = string[:-2] + ">"
+        return string
+
 
 class AtrComparison:
     """
@@ -120,6 +127,32 @@ class Graph:
     def __bool__(self):
         return bool(self.outputs) or bool(self.nodes) or bool(self.edges) or bool(self.inputs)
 
+    @property
+    def wires(self) -> List[Wire]:
+        """Sometimes, we need to access all the wires of a graph at once
+
+        Returns:
+            List[Wire]: The sum of inputs, outputs and nodes
+        """
+        return self.inputs + self.outputs + self.nodes
+
+    def neighbouring_i_o(self, containing_graph: 'Graph') -> 'Graph':
+        """Returns a graph containing the  neighbouring I/O as well as the edges linking them to *self*
+
+        Args:
+            containing_graph (Graph): graph to pick neighbours from
+
+        Returns:
+            Graph: graph containing the  neighbouring I/O as well as the edges linking them to *self*
+        """
+        neighbours = self.neighbours(containing_graph)
+        neighbour_i_o = Graph(inputs=neighbours.inputs, outputs=neighbours.outputs)
+        i_o_names = {wire.name for wire in neighbours.inputs + neighbours.outputs}
+        for edge in neighbours.edges:
+            if set(edge).intersection(neighbours.inputs + neighbours.outputs) or edge.name in i_o_names:
+                neighbour_i_o.edges.append(edge)
+        return neighbour_i_o
+
     def augment(self, containing_graph: 'Graph') -> bool:
         """ Increase self by adding it's neighbours and the edges linking it to those neighbours, as well as edges
         linking neighbours between them. Returns *True* is the graph has been augmented, *False* otherwise
@@ -153,8 +186,8 @@ class Graph:
         """
         neighbours = Graph()
         for edge in containing_graph.edges:
-            start_wires = self.outputs + self.inputs + self.nodes
-            intersection = [wire for wire in edge if wire in start_wires]
+            # the following line is used instead of a set intersection so an edge between a node and itself is kept
+            intersection = [wire for wire in edge if wire in self.wires]
             if len(intersection) == 1:
                 neighbour = list(set(edge) - set(intersection))[0]
                 if neighbour in containing_graph.outputs and neighbour not in neighbours.outputs:
@@ -172,9 +205,17 @@ class Graph:
                 if temp_output_edge_wire and temp_output_edge_wire[0] not in neighbours.outputs + self.outputs:
                     neighbours.outputs.append(temp_output_edge_wire[0])
                     neighbours.edges.append(edge)
+            elif edge.name in [wire.name for wire in self.wires]:
+                neighbour = list(set(containing_graph.wires).intersection(edge))[0]
+                if neighbour in containing_graph.outputs and neighbour not in neighbours.outputs:
+                    neighbours.outputs.append(neighbour)
+                if neighbour in containing_graph.inputs and neighbour not in neighbours.inputs:
+                    neighbours.inputs.append(neighbour)
+                if neighbour in containing_graph.nodes and neighbour not in neighbours.nodes:
+                    neighbours.nodes.append(neighbour)
+                neighbours.edges.append(edge)
         for edge in containing_graph.edges:
-            intersection = set(neighbours.outputs + neighbours.inputs + neighbours.nodes)\
-                .intersection(edge)
+            intersection = set(neighbours.wires).intersection(edge)
             if len(intersection) == 2 or (edge.n1 in intersection and edge.n1 == edge.n2):
                 neighbours.edges.append(edge)
         return neighbours

@@ -13,9 +13,7 @@ from data import UsedFragment, Node, Wire, Edge, GenericMatrix, InterMatrixLink,
 
 
 def split_and_reunite(graph: Graph) -> GenericMatrix:
-    """split_and_reunite(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> GenericMatrix
-
-    Recursive function taking in a graph and returning the corresponding matrix.
+    """Recursive function taking in a graph and returning the corresponding matrix.
 
     To do so, split the graph in two, passes the two halves to it's next iteration and reunite the two matrix obtained
     using the :ref:`fusion_matrices <fusion_matrices>` method from :ref:`divide_conquer`.
@@ -38,45 +36,71 @@ def split_and_reunite(graph: Graph) -> GenericMatrix:
     else:
         graph1, graph2 = connected_graphs_split(graph)
         if not graph2:
+            # we rewrite graph1 and graph2 so they contain two parts of the current graph1
             if no_node_edges_detection(graph.edges):
                 # degenerate cases, when a graph contains only wires
-                first_half_nodes = []
-                second_half_nodes = graph.nodes
+                # in this case, graph1 will contain the I/O connected to another I/O and graph2 will contain the rest
+                graph2 = Graph(nodes=graph.nodes)
 
-                first_half_edges, first_half_inputs, first_half_outputs = \
-                    filter_edges_inputs_outputs_by_nodes_negative(second_half_nodes, graph.edges,
-                                                                  graph.inputs, graph.outputs)
+                graph2 += filter_edges_inputs_outputs_by_nodes(graph2.nodes, graph)
+                graph1 = graph - graph2
             else:
-                half = len(graph.nodes) // 2
-                first_half_nodes = graph.nodes[:half]
-                second_half_nodes = graph.nodes[half:]
+                if graph.inputs:
+                    graph1 = Graph(inputs=[graph.inputs[0]])
+                    graph1.augment(graph)
+                elif graph.nodes:
+                    graph1 = Graph(nodes=[graph.nodes[0]])
+                else:
+                    raise RuntimeError('A graph with no node shouldn\'t enter in this branch')
 
-                first_half_edges, first_half_inputs, first_half_outputs = \
-                    filter_edges_inputs_outputs_by_nodes(first_half_nodes, graph.edges, graph.inputs, graph.outputs)
+                graph1 += graph1.neighbouring_i_o(graph)
+                graph2 = graph - graph1
 
-            second_half_edges, second_half_inputs, second_half_outputs = \
-                filter_edges_inputs_outputs_by_nodes(second_half_nodes, graph.edges, graph.inputs, graph.outputs)
+                in_between_edges = between_graphs_edges(graph1, graph2, graph)
 
-            first_half_matrix = split_and_reunite(Graph(first_half_nodes, first_half_edges,
-                                                        first_half_inputs, first_half_outputs))
-            second_half_matrix = split_and_reunite(Graph(second_half_nodes, second_half_edges,
-                                                         second_half_inputs, second_half_outputs))
+                graph1.edges += in_between_edges
 
-            inter_matrix_link = matrix_linker(first_half_outputs, second_half_outputs)
+                in_between_wires = []
+                for edge in in_between_edges:
+                    in_between_wires.append(Wire(edge.name))
+
+                graph1.outputs += in_between_wires
+                graph2.inputs += in_between_wires
+
+            first_half_matrix = split_and_reunite(graph1)
+            second_half_matrix = split_and_reunite(graph2)
+
+            inter_matrix_link = matrix_linker(graph1, graph2)
         else:
-            first_half_nodes = graph1.nodes
-            second_half_nodes = graph2.nodes
             first_half_matrix = split_and_reunite(graph1)
             second_half_matrix = split_and_reunite(graph2)
             inter_matrix_link = []
 
         input_connections = wires_to_connection_point_node_sorted(graph.inputs, graph.edges,
-                                                                  first_half_nodes, second_half_nodes, False)
+                                                                  graph1.nodes, graph2.nodes, False)
         output_connections = wires_to_connection_point_node_sorted(graph.outputs, graph.edges,
-                                                                   first_half_nodes, second_half_nodes, True)
+                                                                   graph1.nodes, graph2.nodes, True)
 
         return divide_conquer.fusion_matrices(first_half_matrix, second_half_matrix, input_connections,
                                               output_connections, inter_matrix_link)
+
+
+def between_graphs_edges(graph1: Graph, graph2: Graph, containing_graph: Graph) -> List[Edge]:
+    """returns the edges linking two sub-graphs of *containing_graph*.
+
+    Args:
+        graph1 (Graph): first graph
+        graph2 (Graph): second graph
+        containing_graph (Graph): graph containing the two others
+
+    Returns:
+        List[Edge]: edges of *containing_graph* between *graph1* and *graph2*
+    """
+    linking_edges = []
+    for edge in containing_graph.edges:
+        if set(graph1.wires).intersection(edge) and set(graph2.wires).intersection(edge):
+            linking_edges.append(edge)
+    return linking_edges
 
 
 def connected_graphs_split(graph: Graph) -> (Graph, Graph):
@@ -279,37 +303,47 @@ def wires_to_connection_point_edge_sorted(wires: List[Wire], edges_group_1: List
     return connection_points
 
 
-def matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterMatrixLink]:
-    """matrix_linker(m1_outputs: List[Wire], m2_outputs: List[Wire]) -> List[InterMatrixLink]
-
-    Creates a list of *InterMatrixLink* from the common outputs of **m1** and **m2**.
-
-    Links between the two matrices are forced to be between their outputs, that's why you don't need the inputs.
+def matrix_linker(graph1: Graph, graph2: Graph) -> List[InterMatrixLink]:
+    """Creates a list of *InterMatrixLink* from the **m1** to **m2**.
 
     Args:
-        m1_outputs (List[Wire]): outputs from **m1** as a *Wire* list
-        m2_outputs (List[Wire]): outputs from **m2** as a *Wire* list
+        graph1 (Graph): graph corresponding to **m1**
+        graph2 (Graph): graph corresponding to **m2**
 
     Returns:
         List[InterMatrixLink]: links between **m1** and **m2** as a *InterMatrixLink* list
     """
     inter_matrix_link = []
-    for m1_output in m1_outputs:
-        # because of the way the filter has been done, not inter matrix link should be between anything else than
-        # the outputs of the first matrix and the second one
-        if m1_output in m2_outputs:
-            index_n1 = m1_outputs.index(m1_output)
-            index_n2 = m2_outputs.index(m1_output)
-            connection_point1 = ConnectionPoint(is_matrix_2=False, is_out=True, index=index_n1)
-            connection_point2 = ConnectionPoint(is_matrix_2=True, is_out=True, index=index_n2)
-            link = InterMatrixLink(connection_point1, connection_point2)
-            inter_matrix_link.append(link)
+    for edge in set(graph1.edges).intersection(graph2.edges):
+        wire = Wire(edge.name)
+
+        is_out = wire in graph1.outputs
+        is_in = wire in graph1.inputs
+        if is_out:
+            index = graph1.outputs.index(wire)
+        elif is_in:
+            index = graph1.inputs.index(wire)
+        else:
+            continue
+        connection_point1 = ConnectionPoint(is_matrix_2=False, is_out=is_out, index=index)
+
+        is_out = wire in graph2.outputs
+        is_in = wire in graph2.inputs
+        if is_out:
+            index = graph2.outputs.index(wire)
+        elif is_in:
+            index = graph2.inputs.index(wire)
+        else:
+            continue
+        connection_point2 = ConnectionPoint(is_matrix_2=True, is_out=is_out, index=index)
+
+        link = InterMatrixLink(connection_point1, connection_point2)
+        inter_matrix_link.append(link)
     return inter_matrix_link
 
 
-def filter_edges_inputs_outputs_by_nodes(nodes: List[Node], edges: List[Edge], inputs: List[Wire],
-                                         outputs: List[Wire]) -> (List[Edge], List[Wire], List[Wire]):
-    """filter_edges_inputs_outputs_by_nodes(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> List[Edge], List[Wire], List[Wire]
+def filter_edges_inputs_outputs_by_nodes(nodes: List[Node], containing_graph: Graph) -> Graph:
+    """
 
     Since the node list is split in two, many edges and wires don't need to be considered for the next iteration of
     each half. Thus, the edges, inputs and outputs are filtered so they are not passed to the next iteration if they are
@@ -317,38 +351,36 @@ def filter_edges_inputs_outputs_by_nodes(nodes: List[Node], edges: List[Edge], i
 
     Args:
         nodes (List[Node]): nodes to apply the filter from
-        edges (List[Edge]): edges to be filtered
-        inputs (List[Wire]): inputs to be filtered
-        outputs (List[Wire]): outputs to be filtered
+        containing_graph (Graph): graph to be filtered
 
     Returns:
         List[Edge], List[Wire], List[Wire]: edges, inputs and outputs without the members not in relation with the given
         nodes
     """
-    new_edges = edges[:]
-    new_inputs = inputs[:]
-    new_outputs = outputs[:]
-    for edge in edges:
+    new_edges = containing_graph.edges[:]
+    new_inputs = containing_graph.inputs[:]
+    new_outputs = containing_graph.outputs[:]
+    for edge in containing_graph.edges:
         if not set(edge).intersection(nodes):  # edge doesn't contain any node from the list
             new_edges.remove(edge)
-            if set(edge).intersection(inputs):
-                new_inputs.remove(list(set(edge).intersection(inputs))[0])
-            if Wire(edge.name) in inputs:
+            if set(edge).intersection(containing_graph.inputs):
+                new_inputs.remove(list(set(edge).intersection(containing_graph.inputs))[0])
+            if Wire(edge.name) in containing_graph.inputs:
                 new_inputs.remove(Wire(edge.name))
-            if set(edge).intersection(outputs):
-                new_outputs.remove(list(set(edge).intersection(outputs))[0])
-            if Wire(edge.name) in outputs:
+            if set(edge).intersection(containing_graph.outputs):
+                new_outputs.remove(list(set(edge).intersection(containing_graph.outputs))[0])
+            if Wire(edge.name) in containing_graph.outputs:
                 new_outputs.remove(Wire(edge.name))
         elif len(set(edge).intersection(nodes)) == 1 and Wire(edge.name) not in new_outputs and \
-                not set(edge).intersection(inputs) and not set(edge).intersection(outputs):
+                not set(edge).intersection(containing_graph.inputs) and \
+                not set(edge).intersection(containing_graph.outputs):
             new_wire = Wire(edge.name)
             new_outputs.append(new_wire)
-    return new_edges, new_inputs, new_outputs
+    return Graph(edges=new_edges, inputs=new_inputs, outputs=new_outputs)
 
 
-def filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], edges: List[Edge], inputs: List[Wire],
-                                                  outputs: List[Wire]) -> (List[Edge], List[Wire], List[Wire]):
-    """filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], edges: List[Edge], inputs: List[Wire], outputs: List[Wire]) -> List[Edge], List[Wire], List[Wire]
+def filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], containing_graph: Graph) -> Graph:
+    """
 
     Since the node list is split in two, many edges and wires don't need to be considered for the next iteration of
     each half. Thus, the edges, inputs and outputs are filtered so they are not passed to the next iteration if they are
@@ -356,29 +388,26 @@ def filter_edges_inputs_outputs_by_nodes_negative(nodes: List[Node], edges: List
 
     Args:
         nodes (List[Node]): nodes to apply the filter from
-        edges (List[Edge]): edges to be filtered
-        inputs (List[Wire]): inputs to be filtered
-        outputs (List[Wire]): outputs to be filtered
+        containing_graph (Graph): graph to be filtered
 
     Returns:
-        List[Edge], List[Wire], List[Wire]: edges, inputs and outputs without the members in relation with the given
-        nodes
+        Graph: graph containing the edges, inputs and outputs without the members in relation with the given nodes
     """
-    new_edges = edges[:]
-    new_inputs = inputs[:]
-    new_outputs = outputs[:]
-    for edge in edges:
+    new_edges = containing_graph.edges[:]
+    new_inputs = containing_graph.inputs[:]
+    new_outputs = containing_graph.outputs[:]
+    for edge in containing_graph.edges:
         if set(edge).intersection(nodes):  # edge doesn't contain any node from the list
             new_edges.remove(edge)
-            if set(edge).intersection(inputs):
-                new_inputs.remove(list(set(edge).intersection(inputs))[0])
-            if Wire(edge.name) in inputs:
+            if set(edge).intersection(containing_graph.inputs):
+                new_inputs.remove(list(set(edge).intersection(containing_graph.inputs))[0])
+            if Wire(edge.name) in containing_graph.inputs:
                 new_inputs.remove(Wire(edge.name))
-            if set(edge).intersection(outputs):
-                new_outputs.remove(list(set(edge).intersection(outputs))[0])
-            if Wire(edge.name) in outputs:
+            if set(edge).intersection(containing_graph.outputs):
+                new_outputs.remove(list(set(edge).intersection(containing_graph.outputs))[0])
+            if Wire(edge.name) in containing_graph.outputs:
                 new_outputs.remove(Wire(edge.name))
-    return new_edges, new_inputs, new_outputs
+    return Graph(edges=new_edges, inputs=new_inputs, outputs=new_outputs)
 
 
 def filter_inputs_outputs_by_edges(edges: List[Edge],
