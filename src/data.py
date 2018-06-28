@@ -708,6 +708,8 @@ class Pi4Matrix(AbstractMatrix):
             position = node.angle * fragment
             while position < 0:
                 position += 2*fragment
+            while position >= 2*fragment:
+                position -= 2*fragment
             if position in np.arange(2*fragment):
                 null_base = np.zeros((1 << out_number, 1 << in_number))
                 base = deepcopy(null_base)

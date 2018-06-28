@@ -204,7 +204,9 @@ def dictionary_to_data(wire_vertices_dictionary: dict, node_vertices_dictionary:
             if angle == '':
                 angle = 0.
             else:
-                angle.replace('Pi', '1')
+                angle = angle.replace('\\pi', '1')
+                angle = angle.replace('pi', '1')
+                angle = angle.replace('Pi', '1')
                 angle = float(eval(angle))
         nodes.append(Node(node_name, angle, node_type))
 

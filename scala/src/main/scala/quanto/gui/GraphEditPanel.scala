@@ -185,7 +185,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
                 } catch {
                   case _ : Exception =>
                     errorOccurred = true
-                    val errors = error.split("NameError: ")
+                    val errors = error.split(".Error: ")
                     if (errors.length > 1) {
                       result = "Error : " + errors(1)
                     } else {
@@ -253,9 +253,9 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   } catch {
                     case e : Exception =>
                       errorOccurred = true
-                      val errors = error.split("NameError: ")
+                      val errors = error.split(".Error: ")
                       if (errors.length > 1) {
-                        result = "Error : " + error.split("NameError: ")(1)
+                        result = "Error : " + errors(1)
                       } else {
                         result = error
                       }
