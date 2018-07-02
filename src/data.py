@@ -200,11 +200,13 @@ class Graph:
                 temp_input_edge_wire = [wire for wire in containing_graph.inputs if wire.name == edge.name]
                 if temp_input_edge_wire and temp_input_edge_wire[0] not in neighbours.inputs + self.inputs:
                     neighbours.inputs.append(temp_input_edge_wire[0])
-                    neighbours.edges.append(edge)
+                    if edge not in neighbours.edges:
+                        neighbours.edges.append(edge)
                 temp_output_edge_wire = [wire for wire in containing_graph.outputs if wire.name == edge.name]
                 if temp_output_edge_wire and temp_output_edge_wire[0] not in neighbours.outputs + self.outputs:
                     neighbours.outputs.append(temp_output_edge_wire[0])
-                    neighbours.edges.append(edge)
+                    if edge not in neighbours.edges:
+                        neighbours.edges.append(edge)
             elif edge.name in [wire.name for wire in self.wires]:
                 neighbour = list(set(containing_graph.wires).intersection(edge))[0]
                 if neighbour in containing_graph.outputs and neighbour not in neighbours.outputs:
@@ -215,7 +217,7 @@ class Graph:
                     neighbours.nodes.append(neighbour)
                 neighbours.edges.append(edge)
         for edge in containing_graph.edges:
-            intersection = set(neighbours.wires).intersection(edge)
+            intersection = [wire for wire in edge if wire in neighbours.wires]
             if len(intersection) == 2 or (edge.n1 in intersection and edge.n1 == edge.n2):
                 neighbours.edges.append(edge)
         return neighbours

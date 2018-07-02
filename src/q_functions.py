@@ -115,6 +115,9 @@ def connected_graphs_split(graph: Graph) -> (Graph, Graph):
     # possible improvement, return balanced graphs
     if graph.nodes:
         increasing_graph = Graph(nodes=[graph.nodes[0]])
+        # the potential loops must be included
+        edges = [edge for edge in graph.edges if edge.n1 == graph.nodes[0] and edge.n2 == graph.nodes[0]]
+        increasing_graph.edges = edges
     elif graph.inputs:
         increasing_graph = Graph(inputs=[graph.inputs[0]])
     elif graph.outputs:
@@ -254,7 +257,6 @@ def wires_to_connection_point_node_sorted(wires: List[Wire], edges: List[Edge], 
 
         return _cp_dict
 
-    # this test is only done for the first group since for this algorithm, only the first group may be empty
     if nodes_group_1:
         connection_points_dict = _wires_to_connection_point_node_shortcut(wires, edges, nodes_group_1, is_output,
                                                                           False, connection_points_dict)
