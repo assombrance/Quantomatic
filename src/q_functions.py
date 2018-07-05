@@ -431,13 +431,19 @@ def filter_inputs_outputs_by_edges(edges: List[Edge],
     new_inputs = inputs[:]
     new_outputs = outputs[:]
     for input_wire in inputs:
+        found = False
         for edge in edges:
-            if input_wire not in edge:
-                new_inputs.remove(input_wire)
+            if input_wire in edge:
+                found = True
+        if not found:
+            new_inputs.remove(input_wire)
     for output_wire in outputs:
+        found = False
         for edge in edges:
-            if output_wire not in edge:
-                new_outputs.remove(output_wire)
+            if output_wire in edge:
+                found = True
+        if not found:
+            new_outputs.remove(output_wire)
     return new_inputs, new_outputs
 
 

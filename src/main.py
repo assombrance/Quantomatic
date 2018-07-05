@@ -20,6 +20,8 @@ import numpy as np
 import loader
 
 
+# TODO there is a problem if a wire (not an edge) is not connected to anything
+
 if __name__ == '__main__':
     np.set_printoptions(suppress=True)
     np.set_printoptions(precision=3)

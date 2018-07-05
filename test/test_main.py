@@ -1,3 +1,7 @@
+# coding=UTF-8
+"""
+Test file
+"""
 from data import Node, Pi4Matrix, UsedFragment, Wire, Graph, Edge
 import q_functions as qf
 import numpy as np
@@ -169,3 +173,76 @@ def test_graph_bool_false():
     g = Graph()
 
     assert not g
+
+
+def test_split_and_reunite():
+    b0 = Wire("b0")
+    b1 = Wire("b1")
+    b2 = Wire("b2")
+    b3 = Wire("b3")
+    v0 = Node("v0", 0.0, "X", 3)
+    v1 = Node("v1", 0.0, "X", 3)
+    v2 = Node("v2", 0.0, arity=3)
+    v3 = Node("v3", 0.0, arity=3)
+    e0 = Edge("e0", v0, v3)
+    e1 = Edge("e1", v1, v2)
+    e2 = Edge("e2", v2, v0)
+    e3 = Edge("e3", v1, v3)
+    e4 = Edge("e4", v0, b1)
+    e5 = Edge("e5", v2, b0)
+    e7 = Edge("e7", v1, b2)
+    e8 = Edge("e8", v3, b3)
+    inputs = [b1, b2]
+    outputs = [b0, b3]
+    nodes = [v3, v1, v0, v2]
+    edges = [e3, e5, e0, e4, e2, e8, e1, e7]
+    graph = Graph(nodes, edges, inputs, outputs)
+    m1 = [[32, 0, 0, 0],
+          [0, 0, 0, 32],
+          [0, 0, 0, 32],
+          [32, 0, 0, 0]]
+    m2 = np.zeros((4, 4))
+    m3 = np.zeros((4, 4))
+    m4 = np.zeros((4, 4))
+    expected_result = Pi4Matrix(m1, m2, m3, m4, 6)
+    assert not (qf.split_and_reunite(graph) - expected_result).any()
+
+
+def test_between_graphs_edges():
+    b0 = Wire("b0")
+    b1 = Wire("b1")
+    b2 = Wire("b2")
+    b3 = Wire("b3")
+    v0 = Node("v0", 0.0, "X", 3)
+    v1 = Node("v1", 0.0, "X", 3)
+    v2 = Node("v2", 0.0, arity=3)
+    v3 = Node("v3", 0.0, arity=3)
+    e0 = Edge("e0", v0, v3)
+    e1 = Edge("e1", v1, v2)
+    e2 = Edge("e2", v2, v0)
+    e3 = Edge("e3", v1, v3)
+    e4 = Edge("e4", v0, b1)
+    e5 = Edge("e5", v2, b0)
+    e7 = Edge("e7", v1, b2)
+    e8 = Edge("e8", v3, b3)
+    inputs = [b1, b2]
+    outputs = [b0, b3]
+    nodes = [v3, v1, v0, v2]
+    edges = [e3, e5, e0, e4, e2, e8, e1, e7]
+    graph = Graph(nodes, edges, inputs, outputs)
+    g1 = Graph([v0], [e4], [b1])
+    g2 = Graph([v3, v1, v2], [e2, e0, e1, e3, e7, e8, e5], [b2], [b0, b3])
+    result = qf.between_graphs_edges(g1, g2, graph)
+    expected_result = [e2, e0]
+    assert set(result) - set(expected_result) == set()
+
+
+def test_no_node_edges_detection_true():
+    assert qf.no_node_edges_detection([Edge("e0", Wire("b0"), Wire("b1"))])
+
+
+def test_no_node_edges_detection_false():
+    assert not qf.no_node_edges_detection([Edge("e0", Node("n0"), Wire("b1"))])
+
+
+# def test_
