@@ -10,6 +10,7 @@ import quanto.data._
 import quanto.gui.graphview.GraphView
 import quanto.util.swing.ToolBar
 
+import scala.collection.mutable.ArrayBuffer
 import scala.swing._
 import scala.swing.event._
 import scala.sys.process.{Process, ProcessLogger}
@@ -141,49 +142,17 @@ class GraphEditControls(theory: Theory) extends Publisher {
                 messageType = Dialog.Message.Info
               )
             } else {
-              val graphPath = doc.document.file.get.getAbsolutePath
-              // the .jar is meant to be run form the scala directory
-              val pythonSrcPath = "../src/"
-              val mainPath = pythonSrcPath + "main.py"
-              val numberedAnnotationsPath = pythonSrcPath + "numbered_annotations.py"
-              val OS = Properties.envOrNone("OS")
-              var OSValue = ""
-              OS match {
-                case Some(v) => OSValue = v
-                case _ =>
-              }
-              var command = ""
-              if (OSValue.contains("Windows")){
-                command = "python " + numberedAnnotationsPath + " \"" + graphPath + "\""
-              } else {
-                command = "python3 " + numberedAnnotationsPath + " " + graphPath
-              }
-              val numberedAnnotationsReturn = Process(command).!!
-              val numberedAnnotationsReturnArray = numberedAnnotationsReturn.split(";")
-              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll(" ", "")
-              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll(" ", "")
-              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll("\'", "")
-              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll("\'", "")
-              if (numberedAnnotationsReturnArray(0).contains("True")){
-                var command = ""
-                if (OSValue.contains("Windows")){
-                  command = "python " + mainPath + " \"" + graphPath + "\" " + numberedAnnotationsReturnArray(1) + " " +
-                    numberedAnnotationsReturnArray(2)
-                } else {
-                  command = "python3 " + mainPath + " " + graphPath + " " + numberedAnnotationsReturnArray(1) + " " +
-                    numberedAnnotationsReturnArray(2)
-                }
-                command = command.dropRight(2)
+              def executeMainCommand(_command: String): Unit = {
                 var result = ""
                 var error = ""
                 val logger = ProcessLogger(
                   (o: String) => println(o),
                   (e: String) => error += e)
                 var errorOccurred = false
-                try {
-                  result = Process(command).!!(logger)
-                } catch {
-                  case _ : Exception =>
+                try
+                  result = Process(_command).!!(logger)
+                catch {
+                  case _: Exception =>
                     errorOccurred = true
                     val errors = error.split(".Error: ")
                     if (errors.length > 1) {
@@ -196,10 +165,10 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
                 } else {
                   val resultArray = result.split("_______________")
-                  System.out.println(result)
                   var content: Array[AnyRef] = null
-                  def copyButton(copyText: String): JButton = {
-                    val copyButton = new JButton("Copy")
+
+                  def copyButton(buttonName: String, copyText: String): JButton = {
+                    val copyButton = new JButton(buttonName)
                     val copyAction = new ActionListener {
                       override def actionPerformed(e: awt.event.ActionEvent): Unit = {
                         val stringSelection = new StringSelection(copyText)
@@ -210,23 +179,142 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     copyButton.addActionListener(copyAction)
                     copyButton
                   }
-                  if (resultArray.length == 1) {
-                    val matrix : String = resultArray(1)
-                    val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
-                      .replace(" ", "&nbsp;")
-                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
-                    matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
-                    content = Array(matrixLabel, copyButton(matrix))
-                  } else {
-                    val matrix : String = resultArray(1)
-                    val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
-                      .replace(" ", "&nbsp;")
-                    val matrixLabel : JLabel = new JLabel(matrixLabelText)
-                    matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
-                    content = Array(resultArray(0), matrixLabel, copyButton(matrix))
+
+                  var matrix: String = resultArray(1)
+                  // we remove excess line breaks
+                  val charArrayMatrix = ArrayBuffer(matrix.toCharArray: _*)
+                  while (charArrayMatrix(0) == '\n' || charArrayMatrix(0) == '\r') {charArrayMatrix.remove(0)}
+                  while (charArrayMatrix.last == '\n' || charArrayMatrix.last == '\r') {charArrayMatrix.remove(charArrayMatrix.length - 1)}
+                  matrix = charArrayMatrix.mkString("")
+                  val matrixLabelText: String = "<html>" + matrix.replace("\n", "<br>")
+                    .replace(" ", "&nbsp;")
+                  val matrixLabel: JLabel = new JLabel(matrixLabelText)
+                  matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                  content = Array(matrixLabel,
+                    copyButton("Raw copy", matrix)
+                    ,copyButton("Latex copy", latexizeMatrix(matrix))
+                    ,copyButton("Sage copy", sageizeMatrix(matrix))
+                    )
+                  if (resultArray.length != 1) {
+                    content = resultArray(0) +: content
                   }
                   Dialog.showMessage(title = "Graph Matrix Result", message = content)
                 }
+              }
+              def latexizeMatrix(rawMatrix: String): String = {
+                var latexizedMatrix: String = ""
+                val lines: Array[String] = rawMatrix.split("\n")
+                val numberOfMatrices = lines.last.split("\\+ *\\[").length
+                val matricesLines : Array[Array[String]] = Array.ofDim(numberOfMatrices, lines.length)
+                for (lineIndex <- lines.indices) {
+                  val lineMatrices : Array[String] = lines(lineIndex).split("\\] *\\[")
+                  for (matrixIndex <- lineMatrices.indices) {
+                    matricesLines(matrixIndex)(lineIndex) = lineMatrices(matrixIndex).split("\\]")(0).split("\\[").last
+                  }
+                } // last line need to be treated differently
+                val lastLineMatrices : ArrayBuffer[String] = ArrayBuffer(lines.last.split("\\]\\]"): _*)
+                lastLineMatrices.remove(lastLineMatrices.length - 1)
+                for (matrixIndex <- lastLineMatrices.indices) {
+                  var a = lastLineMatrices(matrixIndex).split("\\]")(0)
+                  a = a.split("\\[").last
+                  matricesLines(matrixIndex)(lines.length - 1) = a
+//                  matricesLines(matrixIndex)(lines.length - 1) = lastLineMatrices(matrixIndex).split("\\]")(0).split("\\[").last
+                }
+                val latexMatrices : Array[String] = Array.ofDim(numberOfMatrices)
+                for (matrixIndex <- matricesLines.indices) {
+                  var latexMatrix = "\\begin{pmatrix}"
+                  for (matrixLine <- matricesLines(matrixIndex)) {
+                    latexMatrix += matrixLine.split(" ").filter(_ != "").mkString("&") + "\\\\"
+                  }
+                  latexMatrix += "\\end{pmatrix}"
+                  latexMatrices(matrixIndex) = latexMatrix
+                } // now all the matrices are under latex format, all if left is to join them
+                if (latexMatrices.length == 4) {
+                  val n = rawMatrix.split("2\\^").last.split("\\)")(0)
+                  latexizedMatrix = "$\\frac{1}{2^" + n + "}\\left("
+                  latexizedMatrix += latexMatrices(0)
+                  latexizedMatrix += "+e^{i\\pi/4}" + latexMatrices(1)
+                  latexizedMatrix += "+e^{2i\\pi/4}" + latexMatrices(2)
+                  latexizedMatrix += "+e^{3i\\pi/4}" + latexMatrices(3)
+                  latexizedMatrix += "\\right)$"
+                } else { // this case is not handled for now, so only the matrices will be returned
+                  latexizedMatrix = latexMatrices.mkString("\\\\")
+                }
+                latexizedMatrix
+              }
+              def sageizeMatrix(rawMatrix: String): String = {
+                var sageizedMatrix: String = ""
+                val lines: Array[String] = rawMatrix.split("\n")
+                val numberOfMatrices = lines.last.split("\\+ *\\[").length
+                val matricesLines : Array[Array[String]] = Array.ofDim(numberOfMatrices, lines.length)
+                for (lineIndex <- lines.indices) {
+                  val lineMatrices : Array[String] = lines(lineIndex).split("\\] *\\[")
+                  for (matrixIndex <- lineMatrices.indices) {
+                    matricesLines(matrixIndex)(lineIndex) = lineMatrices(matrixIndex).split("\\]")(0).split("\\[").last
+                  }
+                } // last line need to be treated differently
+                val lastLineMatrices : ArrayBuffer[String] = ArrayBuffer(lines.last.split("\\]\\]"): _*)
+                lastLineMatrices.remove(lastLineMatrices.length - 1)
+                for (matrixIndex <- lastLineMatrices.indices) {
+                  matricesLines(matrixIndex)(lines.length - 1) = lastLineMatrices(matrixIndex).split("\\]")(0).split("\\[").last
+                }
+                val sageMatrices : Array[String] = Array.ofDim(numberOfMatrices)
+                for (matrixIndex <- matricesLines.indices) {
+                  var sageMatrix = "matrix(["
+                  for (lineIndex <- matricesLines(matrixIndex).indices) {
+                    sageMatrix += "[" + matricesLines(matrixIndex)(lineIndex).split(" ").filter(_ != "").mkString(",") + "]"
+                    if (lineIndex != matricesLines(matrixIndex).length -1) {
+                      sageMatrix += ","
+                    }
+                  }
+                  sageMatrix += "])"
+                  sageMatrices(matrixIndex) = sageMatrix
+                } // now all the matrices are under latex format, all if left is to join them
+                if (sageMatrices.length == 4) {
+                  val n = rawMatrix.split("2\\^").last.split("\\)")(0)
+                  sageizedMatrix = "1/2^" + n + "*("
+                  sageizedMatrix += sageMatrices(0)
+                  sageizedMatrix += "+exp(i*pi/4)*" + sageMatrices(1)
+                  sageizedMatrix += "+exp(i*pi/2)*" + sageMatrices(2)
+                  sageizedMatrix += "+exp(3*i*pi/4)*" + sageMatrices(3)
+                  sageizedMatrix += ")"
+                } // the other cases are not handled for now
+                sageizedMatrix
+              }
+              val graphPath = doc.document.file.get.getAbsolutePath
+              // the .jar is meant to be run form the scala directory
+              val pythonSrcPath = "../src/"
+              val mainPath = pythonSrcPath + "main.py"
+              val numberedAnnotationsPath = pythonSrcPath + "numbered_annotations.py"
+              val OS = Properties.envOrNone("OS")
+              var OSValue = ""
+              OS match {
+                case Some(v) => OSValue = v
+                case _ =>
+              }
+              var command = ""
+              if (OSValue.contains("Windows")) {
+                command = "python " + numberedAnnotationsPath + " \"" + graphPath + "\""
+              } else {
+                command = "python3 " + numberedAnnotationsPath + " " + graphPath
+              }
+              val numberedAnnotationsReturn = Process(command).!!
+              val numberedAnnotationsReturnArray = numberedAnnotationsReturn.split(";")
+              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll(" ", "")
+              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll(" ", "")
+              numberedAnnotationsReturnArray(1) = numberedAnnotationsReturnArray(1).replaceAll("\'", "")
+              numberedAnnotationsReturnArray(2) = numberedAnnotationsReturnArray(2).replaceAll("\'", "")
+              if (numberedAnnotationsReturnArray(0).contains("True")) {
+                var command = ""
+                if (OSValue.contains("Windows")) {
+                  command = "python " + mainPath + " \"" + graphPath + "\" " + numberedAnnotationsReturnArray(1) + " " +
+                    numberedAnnotationsReturnArray(2)
+                } else {
+                  command = "python3 " + mainPath + " " + graphPath + " " + numberedAnnotationsReturnArray(1) + " " +
+                    numberedAnnotationsReturnArray(2)
+                }
+                command = command.dropRight(2)
+                executeMainCommand(command)
               } else {
                 val inputs = new JTextField
                 val outputs = new JTextField
@@ -237,67 +325,16 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   val inputList = inputs.getText()
                   val outputList = outputs.getText()
                   var command = ""
-                  if (OSValue.contains("Windows")){
+                  if (OSValue.contains("Windows")) {
                     command = "python " + mainPath + " \"" + graphPath + "\" [" + inputList + "] [" + outputList + "]"
                   } else {
                     command = "python3 " + mainPath + " " + graphPath + " [" + inputList + "] [" + outputList + "]"
                   }
-                  var result = ""
-                  var error = ""
-                  val logger = ProcessLogger(
-                    (o: String) => println(o),
-                    (e: String) => error += e)
-                  var errorOccurred = false
-                  try {
-                    result = Process(command).!!(logger)
-                  } catch {
-                    case e : Exception =>
-                      errorOccurred = true
-                      val errors = error.split(".Error: ")
-                      if (errors.length > 1) {
-                        result = "Error : " + errors(1)
-                      } else {
-                        result = error
-                      }
-                  }
-                  if (errorOccurred) {
-                    Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
-                  } else {
-                    val resultArray = result.split("_______________")
-                    var content: Array[AnyRef] = null
-                    def copyButton(copyText: String): JButton = {
-                      val copyButton = new JButton("Copy")
-                      val copyAction = new ActionListener {
-                        override def actionPerformed(e: awt.event.ActionEvent): Unit = {
-                          val stringSelection = new StringSelection(copyText)
-                          val clipboard = Toolkit.getDefaultToolkit.getSystemClipboard
-                          clipboard.setContents(stringSelection, null)
-                        }
-                      }
-                      copyButton.addActionListener(copyAction)
-                      copyButton
-                    }
-                    if (resultArray.length == 1) {
-                      val matrix : String = resultArray(1)
-                      val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
-                        .replace(" ", "&nbsp;")
-                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
-                      matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
-                      content = Array(matrixLabel, copyButton(matrix))
-                    } else {
-                      val matrix : String = resultArray(1)
-                      val matrixLabelText : String = "<html>" + matrix.replace("\n", "<br>")
-                        .replace(" ", "&nbsp;")
-                      val matrixLabel : JLabel = new JLabel(matrixLabelText)
-                      matrixLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
-                      content = Array(resultArray(0), matrixLabel, copyButton(matrix))
-                    }
-                    Dialog.showMessage(title = "Graph Matrix Result", message = content)
-                  }
+                  executeMainCommand(command)
                 }
               }
               setMouseState(SelectTool())
-            }
+              }
           case _ =>
         }
       case _ =>
