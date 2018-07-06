@@ -38,6 +38,9 @@ def split_and_reunite(graph: Graph) -> GenericMatrix:
         if not graph2:
             # we rewrite graph1 and graph2 so they contain two parts of the current graph1
             if no_node_edges_detection(graph.edges):
+                # probably dead code since if a graph has such an edge (containing no node, only I/O), and has nodes,
+                # the connected_graphs_split function would return two distinct graphs
+                #
                 # degenerate cases, when a graph contains only wires
                 # in this case, graph1 will contain the I/O connected to another I/O and graph2 will contain the rest
                 graph2 = Graph(nodes=graph.nodes)
@@ -315,7 +318,7 @@ def matrix_linker(graph1: Graph, graph2: Graph) -> List[InterMatrixLink]:
     Returns:
         List[InterMatrixLink]: links between **m1** and **m2** as a *InterMatrixLink* list
     """
-    inter_matrix_link = []
+    inter_matrix_links = []
     for edge in set(graph1.edges).intersection(graph2.edges):
         wire = Wire(edge.name)
 
@@ -340,8 +343,8 @@ def matrix_linker(graph1: Graph, graph2: Graph) -> List[InterMatrixLink]:
         connection_point2 = ConnectionPoint(is_matrix_2=True, is_out=is_out, index=index)
 
         link = InterMatrixLink(connection_point1, connection_point2)
-        inter_matrix_link.append(link)
-    return inter_matrix_link
+        inter_matrix_links.append(link)
+    return inter_matrix_links
 
 
 def filter_edges_inputs_outputs_by_nodes(nodes: List[Node], containing_graph: Graph) -> Graph:
@@ -471,11 +474,11 @@ def fallback_node_to_matrix(node: Node, in_number: int, out_number: int) -> np.m
         result /= np.sqrt(2)
     elif node.node_type == 'Z':
         result = np.zeros((1 << out_number, 1 << in_number), dtype=complex)
-        result[1, 1] = 1
+        result[0, 0] = 1
         result[-1, -1] = np.exp(np.pi * node.angle * 1j)
     elif node.node_type == 'X':
         result = np.zeros((1 << out_number, 1 << in_number), dtype=complex)
-        result[1, 1] = 1
+        result[0, 0] = 1
         result[-1, -1] = np.exp(np.pi * node.angle * 1j)
         h = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
         result = tensor_power(h, out_number).dot(result).dot(tensor_power(h, in_number))
