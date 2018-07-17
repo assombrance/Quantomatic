@@ -715,6 +715,7 @@ def nodes_matrix(nodes):
                     # Z node, angle node_func[node_name_func]['data']['value']
                     alpha = node_func[node_name_func]['data']['value']
                     alpha.replace('Pi', '1')
+                    alpha.replace('pi', '1')
                     alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
@@ -725,6 +726,7 @@ def nodes_matrix(nodes):
                     else:
                         alpha = node_func[node_name_func]['data']['value']
                         alpha.replace('Pi', '1')
+                        alpha.replace('pi', '1')
                         alpha = float(eval(alpha))
                     matrix_func[0][0] = 1
                     matrix_func[pow(2, m) - 1][pow(2, n) - 1] = cmath.exp(math.pi * alpha * 1j)
@@ -739,6 +741,16 @@ def nodes_matrix(nodes):
                         matrix_func = np.matrix([[1, 1], [1, -1]]) / np.sqrt(2)
                     elif n == 2 and m == 0:
                         matrix_func = np.matrix([[1, 1, 1, -1]]) / np.sqrt(2)
+                    else:
+                        raise NameError('Unhandled Hadamard configuration : (' + str(n) + ',' + str(m) + ') instead of '
+                                                                                                         '(1,1) or '
+                                                                                                         '(2,0)')
+                elif node_func[node_name_func]['data']['type'] == 'not-triangle':
+                    # Hadamard
+                    if n == 1 and m == 1:
+                        matrix_func = np.matrix([[1, 1], [1, 0]]) / np.sqrt(2)
+                    elif n == 2 and m == 0:
+                        matrix_func = np.matrix([[1, 1, 1, 0]]) / np.sqrt(2)
                     else:
                         raise NameError('Unhandled Hadamard configuration : (' + str(n) + ',' + str(m) + ') instead of '
                                                                                                          '(1,1) or '

@@ -1,34 +1,25 @@
 package quanto.gui
 
 
-import org.python.util.PythonInterpreter
+import java.awt.Window
+import java.awt.event.KeyEvent
+import java.io.{File, FilenameFilter, PrintWriter}
+import java.util.prefs.Preferences
 
+import akka.actor.ActorSystem
+import akka.util.Timeout
+import javax.swing.plaf.metal.MetalLookAndFeel
+import javax.swing.{KeyStroke, SwingUtilities, UIManager}
+import org.python.util.PythonInterpreter
+import quanto.data._
+import quanto.gui.histview.HistView
+import quanto.util.json.Json
+import quanto.util.{UserAlerts, UserOptions, WebHelper}
+
+import scala.concurrent.duration._
 import scala.io.Source
 import scala.swing._
 import scala.swing.event.{Key, SelectionChanged}
-import javax.swing.{KeyStroke, UIManager}
-import java.awt.event.KeyEvent
-
-import quanto.util.json.{Json, JsonString}
-import quanto.data._
-import java.io.{File, FilenameFilter, IOException, PrintWriter}
-import javax.swing.plaf.metal.MetalLookAndFeel
-import java.util.prefs.Preferences
-
-import quanto.gui.histview.HistView
-import akka.actor.{ActorSystem, Props}
-import quanto.core._
-import akka.pattern.ask
-import akka.util.Timeout
-import akka.actor.PoisonPill
-
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext
-import ExecutionContext.Implicits.global
-import java.awt.{Color, Window}
-import javax.swing.SwingUtilities
-
-import quanto.util.{Globals, UserAlerts, UserOptions, WebHelper}
 
 
 object QuantoDerive extends SimpleSwingApplication {

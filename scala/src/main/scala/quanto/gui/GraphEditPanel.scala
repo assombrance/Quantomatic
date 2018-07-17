@@ -1,6 +1,8 @@
 package quanto.gui
 
-import javax.swing.{ImageIcon, JTextField}
+import java.awt.Font
+
+import javax.swing.{ImageIcon, JLabel, JTextField}
 import quanto.data._
 import quanto.gui.graphview.GraphView
 import quanto.util.swing.ToolBar
@@ -65,7 +67,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
     tooltip = "Add Bang Box (B)"
   }
 
-  val AddMatrixButton = new ToggleButton() with ToolButton {
+  val MatrixButton = new ToggleButton() with ToolButton {
     icon = new ImageIcon(GraphEditor.getClass.getResource("matrix.png"), "Compute Matrix")
     tool = MatrixTool()
     tooltip = "Compute Matrix"
@@ -76,7 +78,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
     AddBoundaryButton,
     AddEdgeButton,
     AddBangBoxButton,
-    AddMatrixButton)
+    MatrixButton)
 
   def setMouseState(m : MouseState) {
     val previousTool = GraphToolGroup.selected
@@ -194,7 +196,11 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   if (resultArray.length == 1){
                     Dialog.showMessage(title = "Graph Matrix Result", message = resultArray(0))
                   } else {
-                    val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
+                    var labelText = "<html>" + resultArray(1)
+                    labelText = labelText.replace("\n", "<br>").replace(" ", "&nbsp;")
+                    val resultLabel = new JLabel(labelText)
+                    resultLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
+                    val content: Array[AnyRef] = Array(resultArray(0), resultLabel, new JTextField(resultArray(1)))
                     Dialog.showMessage(title = "Graph Matrix Result", message = content)
                   }
                 }
@@ -224,9 +230,9 @@ class GraphEditControls(theory: Theory) extends Publisher {
                   } catch {
                     case e : Exception =>
                       errorOccurred = true
-                      val errors = error.split("NameError: ")
+                      val errors = error.split("ValueError: ")
                       if (errors.length > 1) {
-                        result = "Error : " + error.split("NameError: ")(1)
+                        result = "Error : " + errors(1)
                       } else {
                         result = error
                       }
@@ -235,11 +241,15 @@ class GraphEditControls(theory: Theory) extends Publisher {
                     Dialog.showMessage(title = "error", message = result, messageType = Dialog.Message.Error)
                   } else {
                     val resultArray = result.split("_______________")
+                    var labelText = "<html>" + resultArray(1)
+                    labelText = labelText.replace("\n", "<br>").replace(" ", "&nbsp;")
+                    val resultLabel = new JLabel(labelText)
+                    resultLabel.setFont(new Font("monospaced", Font.PLAIN, 12))
                     if (resultArray.length == 1) {
-                      val content: Array[AnyRef] = Array(resultArray(0), new JTextField(resultArray(0)))
+                      val content: Array[AnyRef] = Array(resultLabel, new JTextField(resultArray(0)))
                       Dialog.showMessage(title = "Graph Matrix Result", message = content)
                     } else {
-                      val content: Array[AnyRef] = Array(resultArray(0), resultArray(1), new JTextField(resultArray(1)))
+                      val content: Array[AnyRef] = Array(resultArray(0), resultLabel, new JTextField(resultArray(1)))
                       Dialog.showMessage(title = "Graph Matrix Result", message = content)
                     }
                   }
@@ -260,7 +270,7 @@ class GraphEditControls(theory: Theory) extends Publisher {
   }
 
   val MainToolBar = new ToolBar {
-    contents += (SelectButton, AddVertexButton, AddBoundaryButton, AddEdgeButton, AddBangBoxButton, AddMatrixButton)
+    contents += (SelectButton, AddVertexButton, AddBoundaryButton, AddEdgeButton, AddBangBoxButton, MatrixButton)
   }
 }
 
