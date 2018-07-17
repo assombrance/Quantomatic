@@ -20,7 +20,7 @@ Inputs : b3,b1
 Outputs : b0,b2
 ```
 
-Alternatively, you can annotate the edges going to the wire, with input or output and the number of the I/O, to follow the previous example, we would have :
+Alternatively, you can annotate the edges going to the wire, with 'input'/'in'/'i' or 'output'/'out'/'o' and the number of the I/O, to follow the previous example, we would have :
 <pre>
   b0         b1
    |          |
